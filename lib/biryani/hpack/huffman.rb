@@ -265,6 +265,9 @@ module Biryani
 
       DECODE_TABLE = ENCODE_TABLE.each_with_index.to_h.freeze
 
+      EOS = '1' * 30
+      private_constant :EOS
+
       # @param s [String]
       #
       # @return [String] binary
@@ -276,6 +279,8 @@ module Biryani
 
       # @param encoded [String]
       #
+      # @raise [StandardError]
+      #
       # @return [String]
       def self.decode(encoded)
         bits = encoded.unpack1('B*').chars
@@ -283,6 +288,8 @@ module Biryani
         accumulator = Struct.new(:s, :buf)
         res = bits.each_with_object(accumulator.new(s: '', buf: '')) do |bit, acc|
           acc.buf << bit
+          raise StandardError if acc.buf == EOS
+
           if (chr = DECODE_TABLE[acc.buf])
             acc.s << chr
             acc.buf.clear
@@ -290,6 +297,7 @@ module Biryani
 
           acc
         end
+        raise StandardError if res.buf.chars.any? { |c| c != '1' } || res.buf.length >= 8
 
         res.s
       end
