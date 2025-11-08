@@ -279,7 +279,7 @@ module Biryani
 
       # @param encoded [String]
       #
-      # @raise [StandardError]
+      # @raise [HuffmanDecodeError]
       #
       # @return [String]
       def self.decode(encoded)
@@ -288,7 +288,7 @@ module Biryani
         accumulator = Struct.new(:s, :buf)
         res = bits.each_with_object(accumulator.new(s: '', buf: '')) do |bit, acc|
           acc.buf << bit
-          raise StandardError if acc.buf == EOS
+          raise Error::HuffmanDecodeError if acc.buf == EOS
 
           if (chr = DECODE_TABLE[acc.buf])
             acc.s << chr
@@ -297,7 +297,7 @@ module Biryani
 
           acc
         end
-        raise StandardError if res.buf.chars.any? { |c| c != '1' } || res.buf.length >= 8
+        raise Error::HuffmanDecodeError if res.buf.chars.any? { |c| c != '1' } || res.buf.length >= 8
 
         res.s
       end
