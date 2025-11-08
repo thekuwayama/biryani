@@ -262,11 +262,10 @@ module Biryani
         11111111111111111111101110
         111111111111111111111111111111
       ].freeze
-
       DECODE_TABLE = ENCODE_TABLE.each_with_index.to_h.freeze
-
       EOS = '1' * 30
-      private_constant :EOS
+
+      private_constant :ENCODE_TABLE, :DECODE_TABLE, :EOS
 
       # @param s [String]
       #
