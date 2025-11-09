@@ -33,7 +33,7 @@ module Biryani
           i += (byte & 127) * 2**m
           m += 7
 
-          break unless (byte & 128).positive?
+          break if (byte & 128).zero?
         end
 
         i # TODO: return offset
