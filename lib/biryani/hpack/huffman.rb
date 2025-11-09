@@ -1,7 +1,7 @@
 module Biryani
   module HPACK
-    # rubocop: disable Metrics/ClassLength
-    class Huffman
+    # rubocop: disable Metrics/ModuleLength
+    module Huffman
       # https://datatracker.ietf.org/doc/html/rfc7541#appendix-B
       ENCODE_TABLE = %w[
         1111111111000
@@ -301,6 +301,6 @@ module Biryani
         res.s
       end
     end
-    # rubocop: enable Metrics/ClassLength
+    # rubocop: enable Metrics/ModuleLength
   end
 end
