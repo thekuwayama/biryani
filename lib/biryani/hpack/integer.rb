@@ -3,13 +3,14 @@ module Biryani
     module Integer
       # @param i [Integer]
       # @param n [Integer]
+      # @param mask [Integer]
       #
-      # @return [String]
-      def self.encode(i, n)
+      # @return [Array]
+      def self.encode(i, n, mask)
         limit = (1 << n) - 1
-        return [i].pack('C*') if i < limit
+        return [i | mask].pack('C*') if i < limit
 
-        bytes = [limit]
+        bytes = [limit | mask]
         i -= limit
         while i > 128
           bytes << i % 128 + 128
@@ -36,7 +37,7 @@ module Biryani
           break if (byte & 128).zero?
         end
 
-        i # TODO: return offset
+        i # TODO: return offset & mask
       end
     end
   end
