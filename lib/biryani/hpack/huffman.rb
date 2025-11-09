@@ -296,7 +296,7 @@ module Biryani
 
           acc
         end
-        raise Error::HuffmanDecodeError if res.buf.chars.any? { |c| c != '1' } || res.buf.length >= 8
+        raise Error::HuffmanDecodeError if res.buf.chars.any? { |c| c != '1' } || res.buf.bytesize >= 8
 
         res.s
       end
