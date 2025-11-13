@@ -17,7 +17,7 @@ module Biryani
         @table.unshift([name, value])
         @size += name.bytesize + value.bytesize + 32
         while @size > @limit
-          n, v = @dynamic_table.pop
+          n, v = @table.pop
           @size -= n.bytesize + v.bytesize + 32
         end
       end
@@ -25,16 +25,18 @@ module Biryani
       # @param name [String]
       # @param value [String]
       #
-      # @return [Some, None]
-      def find(name, value)
-        nv, i = @table.each_with_index.find { |nv, _| nv[0] == name }
-        if nv.nil?
-          None.new
-        elsif nv[1] == value
-          Some.new(i + 1 + STATIC_TABLE.length, nil)
-        else
-          Some.new(i + 1 + STATIC_TABLE.length, value)
-        end
+      # @return [Array]
+      # @return [Integer]
+      def find_field(name, value)
+        @table.each_with_index.find { |nv, _| nv[0] == name && nv[1] == value }
+      end
+
+      # @param name [String]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def find_name(name)
+        @table.each_with_index.find { |nv, _| nv[0] == name }
       end
 
       # @param name [Integer]

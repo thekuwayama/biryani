@@ -1,1 +1,2 @@
-require_relative 'hpack/fields'
+require_relative 'hpack/encoder'
+# require_relative 'hpack/decoder'

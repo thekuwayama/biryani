@@ -71,24 +71,32 @@ module Biryani
         ['via',                         ''],
         ['www-authenticate',            '']
       ].freeze
+      STATIC_TABLE_SIZE = STATIC_TABLE.length
 
-      private_constant :STATIC_TABLE
+      private_constant :STATIC_TABLE, :STATIC_TABLE_SIZE
 
       # @param name [String]
       # @param value [String]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Some, None]
+      # rubocop: disable Metrics/CyclomaticComplexity
       def self.find(name, value, dynamic_table)
-        nv, i = STATIC_TABLE.each_with_index.find { |nv, _| nv[0] == name }
-        if nv.nil?
-          dynamic_table.find(name, value)
-        elsif nv[1] == value
-          Some.new(i + 1, nil)
-        elsif !nv.nil?
-          Some.new(i + 1, value)
-        end
+        found, i = STATIC_TABLE.each_with_index.find { |nv, _| nv[0] == name && nv[1] == value }
+        return Some.new(i + 1, nil) unless found.nil?
+
+        found, i = dynamic_table.find_field(name, value)
+        return Some.new(i + 1 + STATIC_TABLE_SIZE, nil) unless found.nil?
+
+        found, i = STATIC_TABLE.each_with_index.find { |nv, _| nv[0] == name }
+        return Some.new(i + 1, value) unless found.nil?
+
+        found, i = dynamic_table.find_name(name)
+        return Some.new(i + 1 + STATIC_TABLE_SIZE, value) unless found.nil?
+
+        None.new
       end
+      # rubocop: enable Metrics/CyclomaticComplexity
 
       # @param name [String]
       # @param value [String]
@@ -97,11 +105,11 @@ module Biryani
       # @return [String]
       def self.encode(name, value, dynamic_table)
         case find(name, value, dynamic_table)
-        in Some(index, value) if value.nil?
+        in Some(index, v) if v.nil?
           bytes = encode_indexed(index)
-        in Some(index, value)
-          bytes = encode_literal_value_incremental_indexing(index, value)
-          dynamic_table.store(name, value)
+        in Some(index, v)
+          bytes = encode_literal_value_incremental_indexing(index, v)
+          dynamic_table.store(name, v)
         in None
           bytes = encode_literal_field_incremental_indexing(name, value)
           dynamic_table.store(name, value)
