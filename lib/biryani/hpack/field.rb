@@ -72,6 +72,10 @@ module Biryani
 
       private_constant :STATIC_TABLE
 
+      # @param name [String]
+      # @param value [String]
+      #
+      # @return [Some, None]
       def self.find(name, value)
         nv, i = STATIC_TABLE.each_with_index.find { |nv, _| nv[0] == name }
         if nv.nil?
