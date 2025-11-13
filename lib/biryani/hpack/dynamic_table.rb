@@ -1,4 +1,5 @@
 require_relative 'field'
+require_relative 'option'
 
 module Biryani
   module HPACK
