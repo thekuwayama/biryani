@@ -5,7 +5,6 @@ require_relative 'string'
 
 module Biryani
   module HPACK
-    # rubocop: disable Metrics/ModuleLength
     module Field
       # https://datatracker.ietf.org/doc/html/rfc7541#appendix-A
       STATIC_TABLE = [
@@ -108,10 +107,10 @@ module Biryani
         in Some(index, v) if v.nil?
           bytes = encode_indexed(index)
         in Some(index, v)
-          bytes = encode_literal_value_incremental_indexing(index, v)
+          bytes = encode_literal_value(index, v)
           dynamic_table.store(name, v)
         in None
-          bytes = encode_literal_field_incremental_indexing(name, value)
+          bytes = encode_literal_field(name, value)
           dynamic_table.store(name, value)
         end
 
@@ -145,7 +144,7 @@ module Biryani
       # @param value [String]
       #
       # @return [String]
-      def self.encode_literal_value_incremental_indexing(index, value)
+      def self.encode_literal_value(index, value)
         Integer.encode(index, 6, 0b01000000) + String.encode(value)
       end
 
@@ -167,52 +166,11 @@ module Biryani
       # @param value [String]
       #
       # @return [String]
-      def self.encode_literal_field_incremental_indexing(name, value)
+      def self.encode_literal_field(name, value)
         "\x40#{String.encode(name)}#{String.encode(value)}"
-      end
-
-      #   0   1   2   3   4   5   6   7
-      # +---+---+---+---+---+---+---+---+
-      # | 0 | 0 | 0 | 0 |  Index (4+)   |
-      # +---+---+-----------------------+
-      # | H |     Value Length (7+)     |
-      # +---+---------------------------+
-      # | Value String (Length octets)  |
-      # +-------------------------------+
-      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.2
-      #
-      # @param index [Integer]
-      # @param value [String]
-      #
-      # @return [String]
-      def self.encode_literal_value_without_indexing(index, value)
-        Integer.encode(index, 4, 0b00000000) + String.encode(value)
-      end
-
-      #   0   1   2   3   4   5   6   7
-      # +---+---+---+---+---+---+---+---+
-      # | 0 | 0 | 0 | 0 |       0       |
-      # +---+---+-----------------------+
-      # | H |     Name Length (7+)      |
-      # +---+---------------------------+
-      # |  Name String (Length octets)  |
-      # +---+---------------------------+
-      # | H |     Value Length (7+)     |
-      # +---+---------------------------+
-      # | Value String (Length octets)  |
-      # +-------------------------------+
-      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.2
-      #
-      # @param index [Integer]
-      # @param value [String]
-      #
-      # @return [String]
-      def self.encode_literal_field_without_indexing(name, value)
-        "\x00#{String.encode(name)}#{String.encode(value)}"
       end
 
       # TODO: Dynamic Table Size Update
     end
   end
-  # rubocop: enable Metrics/ModuleLength
 end
