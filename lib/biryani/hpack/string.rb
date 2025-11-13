@@ -1,3 +1,5 @@
+require_relative 'huffman'
+
 module Biryani
   module HPACK
     module String

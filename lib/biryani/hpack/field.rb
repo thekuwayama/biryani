@@ -1,3 +1,7 @@
+require_relative 'integer'
+require_relative 'option'
+require_relative 'string'
+
 module Biryani
   module HPACK
     module Field
