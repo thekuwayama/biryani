@@ -73,7 +73,7 @@ module Biryani
       private_constant :STATIC_TABLE
 
       def self.find(name, value)
-        nv, i = STATIC_TABLE.each_with_index.find { |nv, _| nv.first == name }
+        nv, i = STATIC_TABLE.each_with_index.find { |nv, _| nv[0] == name }
         if nv.nil?
           None.new
         elsif nv[1] == value

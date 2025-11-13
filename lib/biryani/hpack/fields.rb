@@ -4,9 +4,7 @@ module Biryani
   module HPACK
     module Fields
       def self.encode(fields)
-        fields.map do |n, v|
-          Field.encode(n.to_s, v.to_s)
-        end
+        fields.each_with_object(''.b) { |nv, acc| acc << Field.encode(nv[0].to_s, nv[1].to_s) }
       end
     end
   end
