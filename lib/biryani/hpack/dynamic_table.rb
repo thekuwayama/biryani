@@ -1,6 +1,9 @@
+require_relative 'field'
+
 module Biryani
   module HPACK
     class DynamicTable
+      # @param limit [Integer]
       def initialize(limit)
         @table = []
         @size = 0

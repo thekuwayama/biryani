@@ -1,9 +1,11 @@
+require_relative 'dynamic_table'
 require_relative 'integer'
 require_relative 'option'
 require_relative 'string'
 
 module Biryani
   module HPACK
+    # rubocop: disable Metrics/ModuleLength
     module Field
       # https://datatracker.ietf.org/doc/html/rfc7541#appendix-A
       STATIC_TABLE = [
@@ -74,34 +76,38 @@ module Biryani
 
       # @param name [String]
       # @param value [String]
+      # @param dynamic_table [DynamicTable]
       #
       # @return [Some, None]
-      def self.find(name, value)
+      def self.find(name, value, dynamic_table)
         nv, i = STATIC_TABLE.each_with_index.find { |nv, _| nv[0] == name }
         if nv.nil?
-          None.new
+          dynamic_table.find(name, value)
         elsif nv[1] == value
           Some.new(i + 1, nil)
-        else
+        elsif !nv.nil?
           Some.new(i + 1, value)
         end
-
-        # TODO: dynamic table
       end
 
       # @param name [String]
       # @param value [String]
+      # @param dynamic_table [DynamicTable]
       #
       # @return [String]
-      def self.encode(name, value)
-        case find(name, value)
+      def self.encode(name, value, dynamic_table)
+        case find(name, value, dynamic_table)
         in Some(index, value) if value.nil?
-          encode_indexed(index)
+          bytes = encode_indexed(index)
         in Some(index, value)
-          encode_literal_value_incremental_indexing(index, value)
+          bytes = encode_literal_value_incremental_indexing(index, value)
+          dynamic_table.store(name, value)
         in None
-          encode_literal_field_incremental_indexing(name, value)
+          bytes = encode_literal_field_incremental_indexing(name, value)
+          dynamic_table.store(name, value)
         end
+
+        bytes
       end
 
       #   0   1   2   3   4   5   6   7
@@ -200,4 +206,5 @@ module Biryani
       # TODO: Dynamic Table Size Update
     end
   end
+  # rubocop: enable Metrics/ModuleLength
 end
