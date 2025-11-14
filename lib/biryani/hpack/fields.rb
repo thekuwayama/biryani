@@ -18,7 +18,7 @@ module Biryani
       def self.decode(s, dynamic_table)
         cursor = 0
         fields = []
-        while cursor < s.length
+        while cursor < s.bytesize
           field, cursor = Field.decode(s, cursor, dynamic_table)
           fields << field
         end

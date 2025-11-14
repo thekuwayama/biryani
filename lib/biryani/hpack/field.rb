@@ -14,16 +14,16 @@ module Biryani
       def self.encode(name, value, dynamic_table)
         case find(name, value, dynamic_table)
         in Some(index, v) if v.nil?
-          bytes = encode_indexed(index)
+          s = encode_indexed(index)
         in Some(index, v)
-          bytes = encode_literal_value(index, v)
+          s = encode_literal_value(index, v)
           dynamic_table.store(name, v)
         in None
-          bytes = encode_literal_field(name, value)
+          s = encode_literal_field(name, value)
           dynamic_table.store(name, value)
         end
 
-        bytes
+        s
       end
 
       # @param name [String]
@@ -104,7 +104,7 @@ module Biryani
 
       # TODO: Dynamic Table Size Update
 
-      # @param bytes [String]
+      # @param s [String]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
@@ -112,22 +112,22 @@ module Biryani
       # @return [Integer]
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
-      def self.decode(bytes, cursor, dynamic_table)
-        if (bytes[cursor] & 0b10000000).positive?
-          decode_indexed(bytes, cursor, dynamic_table)
-        elsif bytes[cursor] == 0b01000000
-          # Literal Header Field with Incremental Indexing
-        elsif (bytes[cursor] & 0b01000000).positive?
-          # Literal Header Field with Incremental Indexing
-        elsif (bytes[cursor] & 0b00100000).positive?
+      def self.decode(s, cursor, dynamic_table)
+        if (s.getbyte(cursor) & 0b10000000).positive?
+          decode_indexed(s, cursor, dynamic_table)
+        elsif s.getbyte(cursor) == 0b01000000
+          decode_literal_field_incremental_indexing(s, cursor, dynamic_table)
+        elsif (s.getbyte(cursor) & 0b01000000).positive?
+          decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
+        elsif (s.getbyte(cursor) & 0b00100000).positive?
           # Dynamic Table Size Update
-        elsif bytes[cursor] == 0b00010000
+        elsif s.getbyte(cursor) == 0b00010000
           # Literal Header Field Never Indexed
-        elsif (bytes[cursor] & 0b00010000).positive?
+        elsif (s.getbyte(cursor) & 0b00010000).positive?
           # Literal Header Field Never Indexed
-        elsif bytes[cursor].zero?
+        elsif s.getbyte(cursor).zero?
           # Literal Header Field without Indexing
-        elsif (bytes[cursor] & 0b11110000).zero?
+        elsif (s.getbyte(cursor) & 0b11110000).zero?
           # Literal Header Field without Indexing
         else
           abort 'unreachable'
@@ -136,21 +136,82 @@ module Biryani
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
 
-      # @param bytes [String]
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 1 |        Index (7+)         |
+      # +---+---------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.1
+      #
+      # @param s [String]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_indexed(bytes, cursor, dynamic_table)
-        index, cursor = Integer.decode(bytes, 7, cursor)
+      def self.decode_indexed(s, cursor, dynamic_table)
+        index, c = Integer.decode(s, 7, cursor)
         field = if index < STATIC_TABLE_SIZE
                   STATIC_TABLE[index - 1]
                 else
                   dynamic_table[index - 1 - STATIC_TABLE_SIZE]
                 end
 
-        [field, cursor]
+        [field, c]
+      end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 1 |           0           |
+      # +---+---+-----------------------+
+      # | H |     Name Length (7+)      |
+      # +---+---------------------------+
+      # |  Name String (Length octets)  |
+      # +---+---------------------------+
+      # | H |     Value Length (7+)     |
+      # +---+---------------------------+
+      # | Value String (Length octets)  |
+      # +-------------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.1
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_literal_field_incremental_indexing(s, cursor, _dynamic_table)
+        name, c = String.decode(s, cursor + 1)
+        value, c = String.decode(s, c)
+
+        [[name, value], c]
+      end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 1 |      Index (6+)       |
+      # +---+---+-----------------------+
+      # | H |     Value Length (7+)     |
+      # +---+---------------------------+
+      # | Value String (Length octets)  |
+      # +-------------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.1
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_literal_value_incremental_indexing(s, cursor, _dynamic_table)
+        index, c = Integer.decode(s, 6, cursor)
+        name = if index < STATIC_TABLE_SIZE
+                 STATIC_TABLE[index - 1][0]
+               else
+                 dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
+               end
+        value, c = String.decode(s, c)
+
+        [[name, value], c]
       end
     end
   end

@@ -18,18 +18,20 @@ module Biryani
       def self.encode(s)
         res = Huffman.encode(s)
         res = s if res.bytesize > s.bytesize
-        Integer.encode(res.length, 7, 0b10000000) + res
+        Integer.encode(res.bytesize, 7, 0b10000000) + res
       end
 
       # @param s [String]
+      # @param cursor [Integer]
       #
       # @return [String]
-      def self.decode(s)
-        h = (s.getbyte(0) | 0b10000000).positive?
-        len = Integer.decode(s.getbyte(0) & 127, 7)
-        return Huffman.decode(s[1..len + 1]) if h
+      # @return [Integer]
+      def self.decode(s, cursor)
+        h = (s.getbyte(cursor) | 0b10000000).positive?
+        len, c = Integer.decode(s, 7, cursor)
+        return [Huffman.decode(s[c...c + len]), c + len] if h
 
-        s[1..len + 1] # TODO: return offset
+        [s[c...c + len], c + len]
       end
     end
   end

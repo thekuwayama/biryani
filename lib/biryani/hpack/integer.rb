@@ -28,19 +28,18 @@ module Biryani
       # @return [Integer]
       def self.decode(s, n, cursor)
         limit = (1 << n) - 1
-        return [s.getbyte(cursor), cursor + 1] if s.getbyte(cursor) & limit != limit
+        h = s.getbyte(cursor)
+        return [h & limit, cursor + 1] if (h & limit) != limit
 
-        i = limit
-        m = 0
-        s[1..].each_byte.each do |byte|
-          i += (byte & 127) * 2**m
-          m += 7
+        res = limit
+        s[1..].each_byte.each_with_index.each do |byte, i|
+          res += (byte & 127) * 2**(i * 7)
           cursor += 1
 
           break if (byte & 128).zero?
         end
 
-        [i, cursor + 1]
+        [res, cursor + 1]
       end
     end
   end
