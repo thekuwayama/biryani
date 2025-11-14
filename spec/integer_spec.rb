@@ -9,9 +9,9 @@ RSpec.describe HPACK::Integer do
     end
 
     it 'should decode' do
-      expect(HPACK::Integer.decode("\x0a".b, 5)).to eq 10
-      expect(HPACK::Integer.decode("\x1f\x9a\x0a".b, 5)).to eq 1337
-      expect(HPACK::Integer.decode("\x2a".b, 8)).to eq 42
+      expect(HPACK::Integer.decode("\x0a".b, 5, 0)).to eq [10, 1]
+      expect(HPACK::Integer.decode("\x1f\x9a\x0a".b, 5, 0)).to eq [1337, 3]
+      expect(HPACK::Integer.decode("\x2a".b, 8, 0)).to eq [42, 1]
     end
   end
 end

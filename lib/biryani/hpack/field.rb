@@ -10,6 +10,26 @@ module Biryani
       # @param value [String]
       # @param dynamic_table [DynamicTable]
       #
+      # @return [String]
+      def self.encode(name, value, dynamic_table)
+        case find(name, value, dynamic_table)
+        in Some(index, v) if v.nil?
+          bytes = encode_indexed(index)
+        in Some(index, v)
+          bytes = encode_literal_value(index, v)
+          dynamic_table.store(name, v)
+        in None
+          bytes = encode_literal_field(name, value)
+          dynamic_table.store(name, value)
+        end
+
+        bytes
+      end
+
+      # @param name [String]
+      # @param value [String]
+      # @param dynamic_table [DynamicTable]
+      #
       # @return [Some, None]
       # rubocop: disable Metrics/CyclomaticComplexity
       def self.find(name, value, dynamic_table)
@@ -28,26 +48,6 @@ module Biryani
         None.new
       end
       # rubocop: enable Metrics/CyclomaticComplexity
-
-      # @param name [String]
-      # @param value [String]
-      # @param dynamic_table [DynamicTable]
-      #
-      # @return [String]
-      def self.encode(name, value, dynamic_table)
-        case find(name, value, dynamic_table)
-        in Some(index, v) if v.nil?
-          bytes = encode_indexed(index)
-        in Some(index, v)
-          bytes = encode_literal_value(index, v)
-          dynamic_table.store(name, v)
-        in None
-          bytes = encode_literal_field(name, value)
-          dynamic_table.store(name, value)
-        end
-
-        bytes
-      end
 
       #   0   1   2   3   4   5   6   7
       # +---+---+---+---+---+---+---+---+
@@ -103,6 +103,55 @@ module Biryani
       end
 
       # TODO: Dynamic Table Size Update
+
+      # @param bytes [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      # rubocop: disable Metrics/CyclomaticComplexity
+      # rubocop: disable Metrics/PerceivedComplexity
+      def self.decode(bytes, cursor, dynamic_table)
+        if (bytes[cursor] & 0b10000000).positive?
+          decode_indexed(bytes, cursor, dynamic_table)
+        elsif bytes[cursor] == 0b01000000
+          # Literal Header Field with Incremental Indexing
+        elsif (bytes[cursor] & 0b01000000).positive?
+          # Literal Header Field with Incremental Indexing
+        elsif (bytes[cursor] & 0b00100000).positive?
+          # Dynamic Table Size Update
+        elsif bytes[cursor] == 0b00010000
+          # Literal Header Field Never Indexed
+        elsif (bytes[cursor] & 0b00010000).positive?
+          # Literal Header Field Never Indexed
+        elsif bytes[cursor].zero?
+          # Literal Header Field without Indexing
+        elsif (bytes[cursor] & 0b11110000).zero?
+          # Literal Header Field without Indexing
+        else
+          abort 'unreachable'
+        end
+      end
+      # rubocop: enable Metrics/CyclomaticComplexity
+      # rubocop: enable Metrics/PerceivedComplexity
+
+      # @param bytes [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_indexed(bytes, cursor, dynamic_table)
+        index, cursor = Integer.decode(bytes, 7, cursor)
+        field = if index < STATIC_TABLE_SIZE
+                  STATIC_TABLE[index - 1]
+                else
+                  dynamic_table[index - 1 - STATIC_TABLE_SIZE]
+                end
+
+        [field, cursor]
+      end
     end
   end
 end
