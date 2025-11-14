@@ -11,15 +11,15 @@ module Biryani
         fields.each_with_object(''.b) { |nv, acc| acc << Field.encode(nv[0].to_s, nv[1].to_s, dynamic_table) }
       end
 
-      # @param bytes [String]
+      # @param s [String]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
-      def self.decode(bytes, dynamic_table)
+      def self.decode(s, dynamic_table)
         cursor = 0
         fields = []
-        while cursor < bytes.length
-          field, cursor = Field.decode(bytes, cursor, dynamic_table)
+        while cursor < s.length
+          field, cursor = Field.decode(s, cursor, dynamic_table)
           fields << field
         end
 

@@ -9,11 +9,11 @@ module Biryani
         @dynamic_table = DynamicTable.new(dynamic_table_limit)
       end
 
-      # @param bytes [String]
+      # @param s [String]
       #
       # @return [Array]
-      def decode(bytes)
-        Fields.decode(bytes, @dynamic_table)
+      def decode(s)
+        Fields.decode(s, @dynamic_table)
       end
     end
   end

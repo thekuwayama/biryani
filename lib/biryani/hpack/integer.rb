@@ -20,19 +20,19 @@ module Biryani
         bytes.pack('C*')
       end
 
-      # @param bytes [String]
+      # @param s [String]
       # @param cursor [Integer]
       # @param n [Integer]
       #
       # @return [Integer]
       # @return [Integer]
-      def self.decode(bytes, n, cursor)
+      def self.decode(s, n, cursor)
         limit = (1 << n) - 1
-        return [bytes.getbyte(cursor), cursor + 1] if bytes.getbyte(cursor) & limit != limit
+        return [s.getbyte(cursor), cursor + 1] if s.getbyte(cursor) & limit != limit
 
         i = limit
         m = 0
-        bytes[1..].each_byte.each do |byte|
+        s[1..].each_byte.each do |byte|
           i += (byte & 127) * 2**m
           m += 7
           cursor += 1

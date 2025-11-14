@@ -269,7 +269,7 @@ module Biryani
 
       # @param s [String]
       #
-      # @return [String] binary
+      # @return [String]
       def self.encode(s)
         bits = s.bytes.map { |sym| ENCODE_TABLE[sym] }.join
         bits << '1' * ((8 - bits.bytesize) % 8)

@@ -16,9 +16,9 @@ module Biryani
       #
       # @return [String]
       def self.encode(s)
-        bytes = Huffman.encode(s)
-        bytes = s if bytes.bytesize > s.bytesize
-        Integer.encode(bytes.length, 7, 0b10000000) + bytes
+        res = Huffman.encode(s)
+        res = s if res.bytesize > s.bytesize
+        Integer.encode(res.length, 7, 0b10000000) + res
       end
 
       # @param s [String]
