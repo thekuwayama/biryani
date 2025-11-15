@@ -5,6 +5,7 @@ require_relative 'string'
 
 module Biryani
   module HPACK
+    # rubocop: disable Metrics/ModuleLength
     module Field
       # @param name [String]
       # @param value [String]
@@ -110,6 +111,7 @@ module Biryani
       #
       # @return [Array]
       # @return [Integer]
+      # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
       def self.decode(s, cursor, dynamic_table)
@@ -120,19 +122,20 @@ module Biryani
         elsif (s.getbyte(cursor) & 0b01000000).positive?
           decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         elsif (s.getbyte(cursor) & 0b00100000).positive?
-          # Dynamic Table Size Update
+          # TODO: Dynamic Table Size Update
         elsif s.getbyte(cursor) == 0b00010000
-          # Literal Header Field Never Indexed
+          decode_literal_field_never_indexed(s, cursor, dynamic_table)
         elsif (s.getbyte(cursor) & 0b00010000).positive?
-          # Literal Header Field Never Indexed
+          decode_literal_value_never_indexed(s, cursor, dynamic_table)
         elsif s.getbyte(cursor).zero?
-          # Literal Header Field without Indexing
+          decode_literal_field_without_indexing(s, cursor, dynamic_table)
         elsif (s.getbyte(cursor) & 0b11110000).zero?
-          # Literal Header Field without Indexing
+          decode_literal_value_without_indexing(s, cursor, _dynamic_table)
         else
           abort 'unreachable'
         end
       end
+      # rubocop: enable Metrics/AbcSize
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
 
@@ -213,6 +216,116 @@ module Biryani
 
         [[name, value], c]
       end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 0 | 0 | 1 |       0       |
+      # +---+---+-----------------------+
+      # | H |     Name Length (7+)      |
+      # +---+---------------------------+
+      # |  Name String (Length octets)  |
+      # +---+---------------------------+
+      # | H |     Value Length (7+)     |
+      # +---+---------------------------+
+      # | Value String (Length octets)  |
+      # +-------------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.3
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_literal_field_never_indexed(s, cursor, _dynamic_table)
+        name, c = String.decode(s, cursor + 1)
+        value, c = String.decode(s, c)
+
+        [[name, value], c]
+      end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 0 | 0 | 1 |  Index (4+)   |
+      # +---+---+-----------------------+
+      # | H |     Value Length (7+)     |
+      # +---+---------------------------+
+      # | Value String (Length octets)  |
+      # +-------------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.3
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_literal_value_never_indexed(s, cursor, _dynamic_table)
+        index, c = Integer.decode(s, 4, cursor)
+        name = if index < STATIC_TABLE_SIZE
+                 STATIC_TABLE[index - 1][0]
+               else
+                 dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
+               end
+        value, c = String.decode(s, c)
+
+        [[name, value], c]
+      end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 0 | 0 | 1 |       0       |
+      # +---+---+-----------------------+
+      # | H |     Name Length (7+)      |
+      # +---+---------------------------+
+      # |  Name String (Length octets)  |
+      # +---+---------------------------+
+      # | H |     Value Length (7+)     |
+      # +---+---------------------------+
+      # | Value String (Length octets)  |
+      # +-------------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.2
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_literal_field_without_indexing(s, cursor, _dynamic_table)
+        name, c = String.decode(s, cursor + 1)
+        value, c = String.decode(s, c)
+
+        [[name, value], c]
+      end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 0 | 0 | 0 |  Index (4+)   |
+      # +---+---+-----------------------+
+      # | H |     Value Length (7+)     |
+      # +---+---------------------------+
+      # | Value String (Length octets)  |
+      # +-------------------------------+
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [Array]
+      # @return [Integer]
+      def self.decode_literal_value_without_indexing(s, cursor, _dynamic_table)
+        index, c = Integer.decode(s, 4, cursor)
+        name = if index < STATIC_TABLE_SIZE
+                 STATIC_TABLE[index - 1][0]
+               else
+                 dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
+               end
+        value, c = String.decode(s, c)
+
+        [[name, value], c]
+      end
     end
+    # rubocop: enable Metrics/ModuleLength
   end
 end
