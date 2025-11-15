@@ -7,6 +7,51 @@ RSpec.describe HPACK::Decoder do
     end
 
     it 'should decode' do
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.5.1
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   4803 3330 3258 0770 7269 7661 7465 611d
+   4d6f 6e2c 2032 3120 4f63 7420 3230 3133
+   2032 303a 3133 3a32 3120 474d 546e 1768
+   7474 7073 3a2f 2f77 7777 2e65 7861 6d70
+   6c65 2e63 6f6d
+HEXDUMP
+                           )).to eq [
+                             [':status', '302'],
+                             ['cache-control', 'private'],
+                             ['date', 'Mon, 21 Oct 2013 20:13:21 GMT'],
+                             ['location', 'https://www.example.com']
+                           ]
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.5.2
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   4803 3330 37c1 c0bf
+HEXDUMP
+                           )).to eq [
+                             [':status', '307'],
+                             ['cache-control', 'private'],
+                             ['date', 'Mon, 21 Oct 2013 20:13:21 GMT'],
+                             ['location', 'https://www.example.com']
+                           ]
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.5.3
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   88c1 611d 4d6f 6e2c 2032 3120 4f63 7420
+   3230 3133 2032 303a 3133 3a32 3220 474d
+   54c0 5a04 677a 6970 7738 666f 6f3d 4153
+   444a 4b48 514b 425a 584f 5157 454f 5049
+   5541 5851 5745 4f49 553b 206d 6178 2d61
+   6765 3d33 3630 303b 2076 6572 7369 6f6e
+   3d31
+HEXDUMP
+                           )).to eq [
+                             [':status', '200'],
+                             ['cache-control', 'private'],
+                             ['date', 'Mon, 21 Oct 2013 20:13:22 GMT'],
+                             ['location', 'https://www.example.com'],
+                             ['content-encoding', 'gzip'],
+                             ['set-cookie', 'foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1']
+                           ]
+    end
+
+    it 'should decode' do
       # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.6.1
       expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
    4882 6402 5885 aec3 771a 4b61 96d0 7abe
