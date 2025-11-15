@@ -20,6 +20,7 @@ RSpec.describe HPACK::Integer do
       expect(HPACK::Integer.decode("\x0a".b, 5, cursor)).to eq [10, 1]
       expect(HPACK::Integer.decode("\x1f\x9a\x0a".b, 5, cursor)).to eq [1337, 3]
       expect(HPACK::Integer.decode("\x2a".b, 8, cursor)).to eq [42, 1]
+      expect(HPACK::Integer.decode("\x8a".b, 5, cursor)).to eq [10, 1]
     end
   end
 end
