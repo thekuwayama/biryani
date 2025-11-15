@@ -71,4 +71,4 @@ module Biryani
 end
 
 require_relative 'hpack/encoder'
-# require_relative 'hpack/decoder'
+require_relative 'hpack/decoder'
