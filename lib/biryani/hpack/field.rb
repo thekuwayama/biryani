@@ -15,16 +15,16 @@ module Biryani
       def self.encode(name, value, dynamic_table)
         case find(name, value, dynamic_table)
         in Some(index, v) if v.nil?
-          s = encode_indexed(index)
+          res = encode_indexed(index)
         in Some(index, v)
-          s = encode_literal_value(index, v)
+          res = encode_literal_value(index, v)
           dynamic_table.store(name, v)
         in None
-          s = encode_literal_field(name, value)
+          res = encode_literal_field(name, value)
           dynamic_table.store(name, value)
         end
 
-        s
+        res
       end
 
       # @param name [String]
