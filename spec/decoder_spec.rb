@@ -7,6 +7,80 @@ RSpec.describe HPACK::Decoder do
     end
 
     it 'should decode' do
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.3.1
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   8286 8441 0f77 7777 2e65 7861 6d70 6c65
+   2e63 6f6d
+HEXDUMP
+                           )).to eq [
+                             [':method', 'GET'],
+                             [':scheme', 'http'],
+                             [':path', '/'],
+                             [':authority', 'www.example.com']
+                           ]
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.3.2
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   8286 84be 5808 6e6f 2d63 6163 6865
+HEXDUMP
+                           )).to eq [
+                             [':method', 'GET'],
+                             [':scheme', 'http'],
+                             [':path', '/'],
+                             [':authority', 'www.example.com'],
+                             ['cache-control', 'no-cache']
+                           ]
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.3.3
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   8287 85bf 400a 6375 7374 6f6d 2d6b 6579
+   0c63 7573 746f 6d2d 7661 6c75 65
+HEXDUMP
+                           )).to eq [
+                             [':method', 'GET'],
+                             [':scheme', 'https'],
+                             [':path', '/index.html'],
+                             [':authority', 'www.example.com'],
+                             ['custom-key', 'custom-value']
+                           ]
+    end
+
+    it 'should decode' do
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.4.1
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4
+   ff
+HEXDUMP
+                           )).to eq [
+                             [':method', 'GET'],
+                             [':scheme', 'http'],
+                             [':path', '/'],
+                             [':authority', 'www.example.com']
+                           ]
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.4.2
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   8286 84be 5886 a8eb 1064 9cbf
+HEXDUMP
+                           )).to eq [
+                             [':method', 'GET'],
+                             [':scheme', 'http'],
+                             [':path', '/'],
+                             [':authority', 'www.example.com'],
+                             ['cache-control', 'no-cache']
+                           ]
+      # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.4.3
+      expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
+   8287 85bf 4088 25a8 49e9 5ba9 7d7f 8925
+   a849 e95b b8e8 b4bf
+HEXDUMP
+                           )).to eq [
+                             [':method', 'GET'],
+                             [':scheme', 'https'],
+                             [':path', '/index.html'],
+                             [':authority', 'www.example.com'],
+                             ['custom-key', 'custom-value']
+                           ]
+    end
+
+    it 'should decode' do
       # https://datatracker.ietf.org/doc/html/rfc7541#appendix-C.5.1
       expect(decoder.decode([<<HEXDUMP.split.join].pack('H*')
    4803 3330 3258 0770 7269 7661 7465 611d
