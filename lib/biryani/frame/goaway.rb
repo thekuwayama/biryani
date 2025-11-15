@@ -1,0 +1,16 @@
+module Biryani
+  module Frame
+    class Goaway < BinData::Record
+      endian :big
+      uint24 :payload_length
+      uint8  :f_type, value: -> { 0x07 }
+      bit8   :unused
+      bit1   :reserved1
+      bit31  :stream_id, value: -> { 0x00 }
+      bit1   :reserved2
+      bit31  :last_stream_id
+      uint32 :error_code
+      string :debug, read_length: -> { payload_length - 8 }
+    end
+  end
+end
