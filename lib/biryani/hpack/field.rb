@@ -111,7 +111,6 @@ module Biryani
       #
       # @return [Array]
       # @return [Integer]
-      # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
       def self.decode(s, cursor, dynamic_table)
@@ -124,18 +123,17 @@ module Biryani
         elsif (s.getbyte(cursor) & 0b00100000).positive?
           # TODO: Dynamic Table Size Update
         elsif s.getbyte(cursor) == 0b00010000
-          decode_literal_field_never_indexed(s, cursor, dynamic_table)
+          decode_literal_field_never_indexed(s, cursor)
         elsif (s.getbyte(cursor) & 0b00010000).positive?
-          decode_literal_value_never_indexed(s, cursor, dynamic_table)
+          decode_literal_value_never_indexed(s, cursor)
         elsif s.getbyte(cursor).zero?
-          decode_literal_field_without_indexing(s, cursor, dynamic_table)
+          decode_literal_field_without_indexing(s, cursor)
         elsif (s.getbyte(cursor) & 0b11110000).zero?
-          decode_literal_value_without_indexing(s, cursor, _dynamic_table)
+          decode_literal_value_without_indexing(s, cursor)
         else
           abort 'unreachable'
         end
       end
-      # rubocop: enable Metrics/AbcSize
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
 
@@ -182,9 +180,10 @@ module Biryani
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_field_incremental_indexing(s, cursor, _dynamic_table)
+      def self.decode_literal_field_incremental_indexing(s, cursor, dynamic_table)
         name, c = String.decode(s, cursor + 1)
         value, c = String.decode(s, c)
+        dynamic_table.store(name, value)
 
         [[name, value], c]
       end
@@ -205,7 +204,7 @@ module Biryani
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_incremental_indexing(s, cursor, _dynamic_table)
+      def self.decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 6, cursor)
         name = if index < STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
@@ -213,6 +212,7 @@ module Biryani
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
                end
         value, c = String.decode(s, c)
+        dynamic_table.store(name, value)
 
         [[name, value], c]
       end
@@ -233,11 +233,10 @@ module Biryani
       #
       # @param s [String]
       # @param cursor [Integer]
-      # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_field_never_indexed(s, cursor, _dynamic_table)
+      def self.decode_literal_field_never_indexed(s, cursor)
         name, c = String.decode(s, cursor + 1)
         value, c = String.decode(s, c)
 
@@ -256,11 +255,10 @@ module Biryani
       #
       # @param s [String]
       # @param cursor [Integer]
-      # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_never_indexed(s, cursor, _dynamic_table)
+      def self.decode_literal_value_never_indexed(s, cursor)
         index, c = Integer.decode(s, 4, cursor)
         name = if index < STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
@@ -288,11 +286,10 @@ module Biryani
       #
       # @param s [String]
       # @param cursor [Integer]
-      # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_field_without_indexing(s, cursor, _dynamic_table)
+      def self.decode_literal_field_without_indexing(s, cursor)
         name, c = String.decode(s, cursor + 1)
         value, c = String.decode(s, c)
 
@@ -310,11 +307,10 @@ module Biryani
       #
       # @param s [String]
       # @param cursor [Integer]
-      # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_without_indexing(s, cursor, _dynamic_table)
+      def self.decode_literal_value_without_indexing(s, cursor)
         index, c = Integer.decode(s, 4, cursor)
         name = if index < STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
