@@ -8,7 +8,7 @@ module Biryani
       bit1   :ack
       bit1   :reserved
       bit31  :stream_id, value: -> { 0x00 }
-      uint64 :opaque
+      string :opaque, read_length: -> { 0x08 }
     end
   end
 end
