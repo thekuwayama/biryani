@@ -7,8 +7,8 @@ module Biryani
       bit5   :unused1
       bit1   :end_headers
       bit2   :unused2
+      bit1   :reserved
       bit31  :stream_id
-      bit1   :reserved2
       string :fragment, read_length: -> { payload_length }
     end
   end

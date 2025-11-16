@@ -15,7 +15,10 @@ module Biryani
       string :padding, read_length: -> { pad_length }
 
       def data_length
-        payload_length - (padded ? pad_length + 1 : 0)
+        len = payload_length
+        len -= pad_length + 1 if padded
+
+        len
       end
     end
   end
