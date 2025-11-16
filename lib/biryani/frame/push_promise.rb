@@ -3,7 +3,7 @@ module Biryani
     class PushPromise < BinData::Record
       endian :big
       uint24 :payload_length
-      uint8  :f_type, value: -> { 0x05 }
+      uint8  :f_type, value: -> { FrameType::PUSH_PROMISE }
       bit4   :unused1
       bit1   :padded
       bit1   :end_headers

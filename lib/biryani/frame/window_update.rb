@@ -3,7 +3,7 @@ module Biryani
     class WindowUpdate < BinData::Record
       endian :big
       uint24 :payload_length, value: -> { 0x04 }
-      uint8  :f_type, value: -> { 0x08 }
+      uint8  :f_type, value: -> { FrameType::WINDOW_UPDATE }
       bit8   :unused
       bit1   :reserved1
       bit31  :stream_id

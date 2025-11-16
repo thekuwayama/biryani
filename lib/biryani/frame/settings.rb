@@ -3,7 +3,7 @@ module Biryani
     class Settings < BinData::Record
       endian :big
       uint24 :payload_length
-      uint8  :f_type, value: -> { 0x04 }
+      uint8  :f_type, value: -> { FrameType::SETTINGS }
       bit7   :unused
       bit1   :ack
       bit1   :reserved

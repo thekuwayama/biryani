@@ -3,7 +3,7 @@ module Biryani
     class Goaway < BinData::Record
       endian :big
       uint24 :payload_length
-      uint8  :f_type, value: -> { 0x07 }
+      uint8  :f_type, value: -> { FrameType::GOAWAY }
       bit8   :unused
       bit1   :reserved1
       bit31  :stream_id, value: -> { 0x00 }

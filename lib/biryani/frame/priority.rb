@@ -3,7 +3,7 @@ module Biryani
     class Priority < BinData::Record
       endian :big
       uint24 :payload_length, value: -> { 0x05 }
-      uint8  :f_type, value: -> { 0x02 }
+      uint8  :f_type, value: -> { FrameType::PRIORITY }
       bit8   :unused
       bit1   :reserved
       bit31  :stream_id

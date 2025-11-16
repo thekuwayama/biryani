@@ -3,7 +3,7 @@ module Biryani
     class Headers < BinData::Record
       endian :big
       uint24 :payload_length
-      uint8  :f_type, value: -> { 0x01 }
+      uint8  :f_type, value: -> { FrameType::HEADERS }
       bit2   :unused1
       bit1   :priority
       bit1   :unused2

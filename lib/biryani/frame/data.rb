@@ -3,7 +3,7 @@ module Biryani
     class Data < BinData::Record
       endian :big
       uint24 :payload_length
-      uint8  :f_type, value: -> { 0x00 }
+      uint8  :f_type, value: -> { FrameType::DATA }
       bit4   :unused1
       bit1   :padded
       bit2   :unused2

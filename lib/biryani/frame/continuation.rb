@@ -3,7 +3,7 @@ module Biryani
     class Continuation < BinData::Record
       endian :big
       uint24 :payload_length
-      uint8  :f_type, value: -> { 0x09 }
+      uint8  :f_type, value: -> { FrameType::CONTINUATION }
       bit5   :unused1
       bit1   :end_headers
       bit2   :unused2
