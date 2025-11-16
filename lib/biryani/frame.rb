@@ -1,3 +1,4 @@
+require_relative 'frame/continuation'
 require_relative 'frame/data'
 require_relative 'frame/goaway'
 require_relative 'frame/headers'
