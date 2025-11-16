@@ -9,8 +9,8 @@ module Biryani
       bit1   :reserved
       bit31  :stream_id, value: -> { 0x00 }
       array  :setting, initial_length: -> { payload_length / 6 } do
-        uint16 :id
-        uint32 :value
+        uint16 :setting_id
+        uint32 :setting_value
       end
     end
   end
