@@ -2,13 +2,13 @@ module Biryani
   module Frame
     class Settings < BinData::Record
       endian :big
-      uint24 :payload_length
+      uint24 :payload_length, value: -> { setting.length * 6 }
       uint8  :f_type, value: -> { FrameType::SETTINGS }
       bit7   :unused
       bit1   :ack
       bit1   :reserved
       bit31  :stream_id, value: -> { 0x00 }
-      array  :setting, initial_length: -> { payload_length / 6 } do
+      array  :setting, read_until: :eof do
         uint16 :setting_id
         uint32 :setting_value
       end
