@@ -10,12 +10,15 @@ module Biryani
       bit1   :end_stream
       bit1   :reserved
       bit31  :stream_id
-      uint8  :pad_length, onlyif: -> { padded }, value: -> { padding.bytesize }
+      uint8  :pad_length, onlyif: -> { padded.positive? }, value: -> { padding.bytesize }
       string :data, read_length: -> { data_length }
-      string :padding, read_length: -> { pad_length }
+      string :padding, onlyif: -> { padded.positive? }, read_length: -> { pad_length }
 
       def data_length
-        payload_length - (pad_length + 1) * padded.value
+        len = payload_length
+        len -= pad_length + 1 if padded.positive?
+
+        len
       end
     end
   end
