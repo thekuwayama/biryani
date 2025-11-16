@@ -2,7 +2,7 @@ module Biryani
   module Frame
     class Goaway < BinData::Record
       endian :big
-      uint24 :payload_length
+      uint24 :payload_length, value: -> { debug.bytesize + 8 }
       uint8  :f_type, value: -> { FrameType::GOAWAY }
       bit8   :unused
       bit1   :reserved1
