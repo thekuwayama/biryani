@@ -23,3 +23,34 @@ require_relative 'frame/push_promise'
 require_relative 'frame/rst_stream'
 require_relative 'frame/settings'
 require_relative 'frame/window_update'
+
+module Biryani
+  module Frame
+    FRAME_MAP = {
+      FrameType::DATA => Data,
+      FrameType::HEADERS => Headers,
+      FrameType::PRIORITY => Priority,
+      FrameType::RST_STREAM => RstStream,
+      FrameType::SETTINGS => Settings,
+      FrameType::PUSH_PROMISE => PushPromise,
+      FrameType::PING => Ping,
+      FrameType::GOAWAY => Goaway,
+      FrameType::WINDOW_UPDATE => WindowUpdate,
+      FrameType::CONTINUATION => Continuation
+    }.freeze
+    private_constant :FRAME_MAP
+
+    # @param io [IO]
+    #
+    # @return [Object] frame
+    def self.read(io)
+      s = io.read(4)
+      len = (s[0...3] << 1).unpack1('C*')
+      typ = s[4].unpack1('C*')
+
+      FRAME_MAP[typ].read(s + io.read(len + 5))
+      # TODO: unknown frame type
+      # TODO: read error
+    end
+  end
+end
