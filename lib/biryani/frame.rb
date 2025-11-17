@@ -45,8 +45,8 @@ module Biryani
     # @return [Object] frame
     def self.read(io)
       s = io.read(4)
-      len = (s[0...3] << 1).unpack1('C*')
-      typ = s[4].unpack1('C*')
+      len = s.unpack1('N*') / 256
+      typ = s[3].unpack1('C*')
 
       FRAME_MAP[typ].read(s + io.read(len + 5))
       # TODO: unknown frame type
