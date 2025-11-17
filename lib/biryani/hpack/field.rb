@@ -114,21 +114,22 @@ module Biryani
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
       def self.decode(s, cursor, dynamic_table)
-        if (s.getbyte(cursor) & 0b10000000).positive?
+        byte = s.getbyte(cursor)
+        if (byte & 0b10000000).positive?
           decode_indexed(s, cursor, dynamic_table)
-        elsif s.getbyte(cursor) == 0b01000000
+        elsif byte == 0b01000000
           decode_literal_field_incremental_indexing(s, cursor, dynamic_table)
-        elsif (s.getbyte(cursor) & 0b01000000).positive?
+        elsif (byte & 0b01000000).positive?
           decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
-        elsif (s.getbyte(cursor) & 0b00100000).positive?
+        elsif (byte & 0b00100000).positive?
           # TODO: Dynamic Table Size Update
-        elsif s.getbyte(cursor) == 0b00010000
+        elsif byte == 0b00010000
           decode_literal_field_never_indexed(s, cursor)
-        elsif (s.getbyte(cursor) & 0b00010000).positive?
+        elsif (byte & 0b00010000).positive?
           decode_literal_value_never_indexed(s, cursor)
-        elsif s.getbyte(cursor).zero?
+        elsif byte.zero?
           decode_literal_field_without_indexing(s, cursor)
-        elsif (s.getbyte(cursor) & 0b11110000).zero?
+        elsif (byte & 0b11110000).zero?
           decode_literal_value_without_indexing(s, cursor)
         else
           abort 'unreachable'
