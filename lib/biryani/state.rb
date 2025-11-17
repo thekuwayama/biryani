@@ -6,10 +6,10 @@ module Biryani
       @state = :idle
     end
 
-    # @param f_type [Integer] frame type
+    # @param frame [Object]
     # @param direction [:send, :recv]
-    def transition!(f_type, direction)
-      @state = self.class.next(@state, f_type, direction)
+    def transition!(frame, direction)
+      @state = self.class.next(@state, frame, direction)
     end
 
     #                          +--------+
@@ -43,7 +43,7 @@ module Biryani
     # https://datatracker.ietf.org/doc/html/rfc9113#section-5.1
     #
     # @param state [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
-    # @param f_type [Integer] frame type
+    # @param frame [Object]
     # @param direction [:send, :recv]
     #
     # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
@@ -51,10 +51,12 @@ module Biryani
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
-    def self.next(state, f_type, direction)
-      return state if [FrameType::SETTINGS, FrameType::GOAWAY].include?(f_type)
-
-      case [state, f_type, direction]
+    def self.next(state, frame, direction)
+      case [state, frame.f_type, direction]
+      in [_, FrameType::SETTINGS, _]
+        state
+      in [_, FrameType::GOAWAY, _]
+        state
       in [:idle, FrameType::HEADERS, :recv] if frame.end_stream.positive?
         :half_closed_remote
       in [:idle, FrameType::HEADERS, :send] if frame.end_stream.positive?
@@ -67,9 +69,13 @@ module Biryani
         :reserved_local
       in [:idle, FrameType::PRIORITY, _]
         :idle
-      in [:open, _, :recv] if frame.end_stream.positive? # TODO: frame with end_stream
+      in [:open, FrameType::DATA, :recv] if frame.end_stream.positive?
         :half_closed_remote
-      in [:open, _, :send] if frame.end_stream.positive?
+      in [:open, FrameType::HEADERS, :recv] if frame.end_stream.positive?
+        :half_closed_remote
+      in [:open, FrameType::DATA, :send] if frame.end_stream.positive?
+        :half_closed_local
+      in [:open, FrameType::HEADERS, :send] if frame.end_stream.positive?
         :half_closed_local
       in [:open, FrameType::RST_STREAM, _]
         :closed
@@ -89,13 +95,17 @@ module Biryani
         :half_closed_local
       in [:half_closed_local, FrameType::RST_STREAM, :send]
         :closed
-      in [:half_closed_local, _, :recv] if f.end_stream.positive?
+      in [:half_closed_local, FrameType::DATA, :recv] if f.end_stream.positive?
+        :closed
+      in [:half_closed_local, FrameType::HEADERS, :recv] if f.end_stream.positive?
         :closed
       in [:half_closed_local, FrameType::RST_STREAM, :recv]
         :closed
       in [:half_closed_local, _, :recv]
         :half_closed_local
-      in [:half_closed_remote, _, :send] if f.end_stream.positive?
+      in [:half_closed_remote, FrameType::DATA, :send] if f.end_stream.positive?
+        :closed
+      in [:half_closed_remote, FrameType::HEADERS, :send] if f.end_stream.positive?
         :closed
       in [:half_closed_remote, FrameType::RST_STREAM, :send]
         :closed
