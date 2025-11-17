@@ -47,8 +47,12 @@ module Biryani
     # @param direction [:send, :recv]
     #
     # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
+    # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/MethodLength
+    # rubocop: disable Metrics/PerceivedComplexity
     def self.next(state, f_type, direction)
-      return state if f_type == FrameType::SETTINGS || f_type == FrameType::GOAWAY
+      return state if [FrameType::SETTINGS, FrameType::GOAWAY].include?(f_type)
 
       case [state, f_type, direction]
       in [:idle, FrameType::HEADERS, :recv] if frame.end_stream.positive?
@@ -111,6 +115,10 @@ module Biryani
         # TODO: protocol_error error
       end
     end
+    # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/MethodLength
+    # rubocop: enable Metrics/PerceivedComplexity
 
     # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
     def value
