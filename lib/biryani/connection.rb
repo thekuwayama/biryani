@@ -4,6 +4,11 @@ module Biryani
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
     private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH
 
+    def initialize
+      @streams = {}
+      @last_stream_id = 0
+    end
+
     # @param io [IO]
     def serve(io)
       self.class.read_http2_magic(io)
@@ -12,9 +17,8 @@ module Biryani
       # TODO: write Frame::Settings via wport
 
       loop do
-        _frame = Frame.read(io)
-
-        # TODO: handling frame & stream.new with wport
+        frame = Frame.read(io)
+        handle(frame)
       end
     end
 
@@ -34,6 +38,39 @@ module Biryani
             io, f = Ractor.receive
             io.write(f) # TODO: check window
           end
+        end
+      end
+    end
+
+    def handle(frame)
+      stream_id = frame.strea_id
+      typ = frame.f_type
+      if stream_id.zero?
+        case typ
+        when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
+          abort 'protocol_error' # TODO: send error
+        when FrameType::SETTINGS
+          # TODO
+        when FrameType::PING
+          # TODO
+        when FrameType::GOAWAY
+          # TODO
+        when FrameType::WINDOW_UPDATE
+          # TODO
+        end
+      else
+        if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
+          abort 'protocol_error' # TODO: send error
+        end
+
+        if (stream = @streams[stream_id])
+          stream.transition_state!(frame, :recv)
+          @streams.delete(stream_id) if stream.close?
+
+          stream.rport << frame
+        else
+          @streams[stream_id] = Stream.new(stream_id)
+          @last_stream_id = [stream_id, @last_stream_id].max
         end
       end
     end
