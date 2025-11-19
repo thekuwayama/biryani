@@ -1,3 +1,6 @@
+require_relative 'frame'
+require_relative 'stream'
+
 module Biryani
   class Connection
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
@@ -13,12 +16,12 @@ module Biryani
     def serve(io)
       self.class.read_http2_magic(io)
 
-      _wport = Writer.new.loop
+      wport = Writer.new.loop
       # TODO: write Frame::Settings via wport
 
       loop do
         frame = Frame.read(io)
-        handle(frame)
+        handle(frame, wport)
       end
     end
 
@@ -42,7 +45,9 @@ module Biryani
       end
     end
 
-    def handle(frame)
+    # @param frame [Object]
+    # @param wport [Ractor::Port]
+    def handle(frame, wport)
       stream_id = frame.strea_id
       typ = frame.f_type
       if stream_id.zero?
@@ -65,9 +70,9 @@ module Biryani
 
         if (stream = @streams[stream_id])
           stream.transition_state!(frame, :recv)
-          @streams.delete(stream_id) if stream.close?
+          @streams.delete(stream_id) if stream.closed?
 
-          stream.rport << frame
+          stream.rport << [frame, wport]
         else
           @streams[stream_id] = Stream.new(stream_id)
           @last_stream_id = [stream_id, @last_stream_id].max
