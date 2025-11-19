@@ -268,6 +268,9 @@ module Biryani
       EOS = '1' * 30
 
       private_constant :ENCODE_TABLE, :DECODE_TABLE, :EOS
+      Ractor.make_shareable(ENCODE_TABLE)
+      Ractor.make_shareable(DECODE_TABLE)
+      Ractor.make_shareable(EOS)
 
       # @param s [String]
       #
@@ -278,6 +281,8 @@ module Biryani
         [bits].pack('B*')
       end
 
+      Accumulator = Struct.new(:s, :buf)
+
       # @param encoded [String]
       #
       # @raise [HuffmanDecodeError]
@@ -285,9 +290,7 @@ module Biryani
       # @return [String]
       def self.decode(encoded)
         bits = encoded.unpack1('B*').chars
-
-        accumulator = Struct.new(:s, :buf)
-        res = bits.each_with_object(accumulator.new(s: '', buf: '')) do |bit, acc|
+        res = bits.each_with_object(Accumulator.new(s: '', buf: '')) do |bit, acc|
           acc.buf << bit
           raise Error::HuffmanDecodeError if acc.buf == EOS
 
