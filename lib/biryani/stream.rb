@@ -24,8 +24,8 @@ module Biryani
 
             if frame.end_stream
               # TODO: Hello, world!
-              tx << Frame::Headers.new(end_headers: true, stream_id: frame.stream_id, fragment: encoder.encode([[':status', '200']]))
-              tx << Frame::Data.new(end_stream: true, stream_id: frame.stream_id, data: 'Hello, world!')
+              tx << Frame::Headers.new(true, false, frame.stream_id, nil, nil, encoder.encode([[':status', '200']]), nil)
+              tx << Frame::Data.new(true, frame.stream_id, 'Hello, world!', nil)
               break
             end
           when FrameType::HEADERS
@@ -34,8 +34,8 @@ module Biryani
 
             if frame.end_stream
               # TODO: Hello, world!
-              tx << Frame::Headers.new(end_headers: true, stream_id: frame.stream_id, fragment: encoder.encode([[':status', '200']]))
-              tx << Frame::Data.new(end_stream: true, stream_id: frame.stream_id, data: 'Hello, world!')
+              tx << Frame::Headers.new(true, false, frame.stream_id, nil, nil, encoder.encode([[':status', '200']]), nil)
+              tx << Frame::Data.new(true, frame.stream_id, 'Hello, world!', nil)
               break
             end
 

@@ -2,21 +2,23 @@ require_relative 'spec_helper'
 
 RSpec.describe Frame::Data do
   context 'Data' do
-    let(:data) do
-      Frame::Data.new(
-        padded: true,
-        stream_id: 2,
-        data: 'Hello, world!',
-        padding: 'Howdy!'
-      )
+    let(:data1) do
+      Frame::Data.new(false, 2, 'Hello, world!', 'Howdy!')
     end
-
     it 'should encode' do
-      expect(data.to_binary_s).to eq "\x00\x00\x14\x00\x08\x00\x00\x00\x02\x06\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x21\x48\x6f\x77\x64\x79\x21".b
+      expect(data1.to_binary_s).to eq "\x00\x00\x14\x00\x08\x00\x00\x00\x02\x06\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x21\x48\x6f\x77\x64\x79\x21".b
     end
 
+    let(:data2) do
+      Frame::Data.read("\x00\x00\x14\x00\x08\x00\x00\x00\x02\x06\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x21\x48\x6f\x77\x64\x79\x21".b)
+    end
     it 'should decode' do
-      expect(Frame::Data.read("\x00\x00\x14\x00\x08\x00\x00\x00\x02\x06\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x21\x48\x6f\x77\x64\x79\x21".b)).to eq data
+      expect(data2.f_type).to eq FrameType::DATA
+      expect(data2.end_stream).to be false
+      expect(data2.stream_id).to be 2
+      expect(data2.data).to eq 'Hello, world!'
+      expect(data2.padding).to eq 'Howdy!'
+      expect(data2.padded?).to eq true
     end
   end
 end
