@@ -43,8 +43,8 @@ module Biryani
           end
         end
       end
-      # rubocop: enable Metrics/AbcSize
     end
+    # rubocop: enable Metrics/AbcSize
 
     # @param frame [Object]
     # @param direction [:send, :recv]
