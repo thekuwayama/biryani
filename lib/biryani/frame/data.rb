@@ -36,11 +36,10 @@ module Biryani
       #
       # @return [Data]
       def self.read(s)
-        payload_length = "\x00#{s[0..2]}".unpack1('N')
-        # f_type = s[3].unpack1('C')
-        padded = (s[4].unpack1('C') & 0b00001000).positive?
-        end_stream = (s[4].unpack1('C') & 0b00000001).positive?
-        stream_id = s[5..8].unpack1('N')
+        payload_length, _, uint8, stream_id = Frame.read_header(s)
+        padded = Frame.read_padded(uint8)
+        end_stream = Frame.read_end_stream(uint8)
+
         if padded
           pad_length = s[9].unpack1('C')
           data_length = payload_length - pad_length - 1

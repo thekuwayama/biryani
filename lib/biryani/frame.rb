@@ -11,6 +11,57 @@ module Biryani
     WINDOW_UPDATE = 0x08
     CONTINUATION  = 0x09
   end
+
+  module Frame
+    # @param s [String]
+    #
+    # @return [Integer]
+    # @return [Integer]
+    # @return [Integer]
+    # @return [Integer]
+    def self.read_header(s)
+      b0, b1, b2, f_type, uint8 = s[0..4].bytes
+      payload_length = (b0 << 16) | (b1 << 8) | b2
+      stream_id = s[5..8].unpack1('N') % 2**31 # Stream Identifier (31)
+
+      [payload_length, f_type, uint8, stream_id]
+    end
+
+    # @param uint8 [Integer]
+    #
+    # @return [Boolean]
+    def self.read_priority(uint8)
+      (uint8 & 0b00100000).positive?
+    end
+
+    # @param uint8 [Integer]
+    #
+    # @return [Boolean]
+    def self.read_padded(uint8)
+      (uint8 & 0b00001000).positive?
+    end
+
+    # @param uint8 [Integer]
+    #
+    # @return [Boolean]
+    def self.read_end_headers(uint8)
+      (uint8 & 0b00000100).positive?
+    end
+
+    # @param uint8 [Integer]
+    #
+    # @return [Boolean]
+    def self.read_end_stream(uint8)
+      (uint8 & 0b00000001).positive?
+    end
+
+    # @param uint8 [Integer]
+    #
+    # @return [Boolean]
+    def self.read_ack(uint8)
+      (uint8 & 0b00000001).positive?
+    end
+  end
 end
 
 require_relative 'frame/continuation'
