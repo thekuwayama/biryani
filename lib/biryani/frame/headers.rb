@@ -3,13 +3,13 @@ module Biryani
     class Headers
       attr_reader :f_type, :end_headers, :end_stream, :stream_id, :stream_dependency, :weight, :fragment, :padding
 
-      # @params end_headers [Boolean]
-      # @params end_stream [Boolean]
-      # @params stream_id [Integer]
-      # @params stream_dependency [Integer, nil]
-      # @params weight [Integer, nil]
-      # @params fragment [String]
-      # @params padding [String, nil]
+      # @param end_headers [Boolean]
+      # @param end_stream [Boolean]
+      # @param stream_id [Integer]
+      # @param stream_dependency [Integer, nil]
+      # @param weight [Integer, nil]
+      # @param fragment [String]
+      # @param padding [String, nil]
       # rubocop: disable Metrics/ParameterLists
       def initialize(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)
         @f_type = FrameType::HEADERS
@@ -62,7 +62,7 @@ module Biryani
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
 
-      # @params s [String]
+      # @param s [String]
       #
       # @return [Headers]
       # rubocop: disable Metrics/AbcSize

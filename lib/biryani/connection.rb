@@ -33,6 +33,8 @@ module Biryani
           io.write(send_frame.to_binary_s)
           @streams.delete(send_frame.stream_id)
         end
+
+        # TODO: close connection
       end
     end
 

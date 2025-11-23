@@ -32,7 +32,7 @@ module Biryani
         payload_length + f_type + flags + stream_id + pad_length + @data + padding
       end
 
-      # @params s [String]
+      # @param s [String]
       #
       # @return [Data]
       def self.read(s)
