@@ -65,7 +65,10 @@ module Biryani
       ['www-authenticate',            '']
     ].freeze
     STATIC_TABLE_SIZE = STATIC_TABLE.length
+
     private_constant :STATIC_TABLE, :STATIC_TABLE_SIZE
+    Ractor.make_shareable(STATIC_TABLE)
+    Ractor.make_shareable(STATIC_TABLE_SIZE)
   end
 end
 
