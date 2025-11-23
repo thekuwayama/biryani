@@ -28,7 +28,7 @@ module Biryani
         until txs.empty?
           _, send_frame = Ractor.select(*txs)
           io.write(send_frame.to_binary_s)
-          @streams.delete(stream_id)
+          @streams.delete(send_frame.stream_id)
         end
       end
     end
