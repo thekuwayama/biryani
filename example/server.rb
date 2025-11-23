@@ -6,15 +6,10 @@ require 'socket'
 require 'biryani'
 
 port = ARGV[0] || 8888
+socket = TCPServer.new(port)
 
-server = TCPServer.new(port)
-loop do
-  socket = server.accept
-
-  conn = Biryani::Connection.new
-  conn.serve(socket)
-  socket&.close
-end
+server = Biryani::Server.new
+server.run(socket)
 
 # $ bundle exec ruby example/server.rb
 # $ curl -v --http2-prior-knowledge http://localhost:8888
