@@ -5,7 +5,10 @@ module Biryani
   class Connection
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
+
     private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH
+    Ractor.make_shareable(CONNECTION_PREFACE)
+    Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
     StreamTx = Struct.new(:stream, :tx)
 
