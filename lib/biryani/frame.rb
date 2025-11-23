@@ -38,7 +38,9 @@ module Biryani
       FrameType::WINDOW_UPDATE => WindowUpdate,
       FrameType::CONTINUATION => Continuation
     }.freeze
+
     private_constant :FRAME_MAP
+    Ractor.make_shareable(FRAME_MAP)
 
     # @param io [IO]
     #
