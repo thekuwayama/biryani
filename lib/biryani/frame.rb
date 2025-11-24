@@ -113,7 +113,7 @@ module Biryani
     # @return [Object] frame
     def self.read(io)
       s = io.read(4)
-      len = s.unpack1('N') / 256
+      len = s.unpack1('N') >> 8 # shift right8 uint32 to get uint24
       typ = s[3].unpack1('C')
 
       FRAME_MAP[typ].read(s + io.read(len + 5))
