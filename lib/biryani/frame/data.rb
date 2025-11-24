@@ -39,9 +39,9 @@ module Biryani
       #
       # @return [Data]
       def self.read(s)
-        payload_length, _, uint8, stream_id = Frame.read_header(s)
-        padded = Frame.read_padded(uint8)
-        end_stream = Frame.read_end_stream(uint8)
+        payload_length, _, flags, stream_id = Frame.read_header(s)
+        padded = Frame.read_padded(flags)
+        end_stream = Frame.read_end_stream(flags)
 
         if padded
           pad_length = s[9].unpack1('C')

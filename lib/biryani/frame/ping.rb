@@ -29,8 +29,8 @@ module Biryani
       #
       # @return [Ping]
       def self.read(s)
-        _, _, uint8, = Frame.read_header(s)
-        ack = Frame.read_ack(uint8)
+        _, _, flags, = Frame.read_header(s)
+        ack = Frame.read_ack(flags)
         opaque = s[9..]
 
         Ping.new(ack, opaque)

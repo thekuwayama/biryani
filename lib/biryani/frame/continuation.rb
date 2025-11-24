@@ -30,8 +30,8 @@ module Biryani
       #
       # @return [Data]
       def self.read(s)
-        _, _, uint8, stream_id = Frame.read_header(s)
-        end_headers = Frame.read_end_headers(uint8)
+        _, _, flags, stream_id = Frame.read_header(s)
+        end_headers = Frame.read_end_headers(flags)
         fragment = s[9..]
 
         Continuation.new(end_headers, stream_id, fragment)

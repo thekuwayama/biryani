@@ -73,11 +73,11 @@ module Biryani
       # @return [Headers]
       # rubocop: disable Metrics/AbcSize
       def self.read(s)
-        payload_length, _, uint8, stream_id = Frame.read_header(s)
-        priority = Frame.read_priority(uint8)
-        padded = Frame.read_padded(uint8)
-        end_headers = Frame.read_end_headers(uint8)
-        end_stream = Frame.read_end_stream(uint8)
+        payload_length, _, flags, stream_id = Frame.read_header(s)
+        priority = Frame.read_priority(flags)
+        padded = Frame.read_padded(flags)
+        end_headers = Frame.read_end_headers(flags)
+        end_stream = Frame.read_end_stream(flags)
 
         if priority && padded
           fragment_length = payload_length

@@ -30,8 +30,8 @@ module Biryani
       #
       # @return [Settings]
       def self.read(s)
-        _, _, uint8, = Frame.read_header(s)
-        ack = Frame.read_ack(uint8)
+        _, _, flags, = Frame.read_header(s)
+        ack = Frame.read_ack(flags)
         setting = s[9..].unpack('nN' * (s[9..].bytesize / 6)).each_slice(2).to_a
 
         Settings.new(ack, setting)
