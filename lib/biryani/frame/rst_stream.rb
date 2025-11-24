@@ -16,7 +16,7 @@ module Biryani
         payload_length = 4
         flags = 0x00
 
-        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + [error_code].pack('N')
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + [@error_code].pack('N')
       end
 
       # @param s [String]

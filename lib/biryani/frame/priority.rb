@@ -27,6 +27,7 @@ module Biryani
       def self.read(s)
         _, _, _, stream_id = Frame.read_header(s)
         stream_dependency, weight = s[9..13].unpack('NC')
+        stream_dependency %= 2**31
 
         Priority.new(stream_id, stream_dependency, weight)
       end
