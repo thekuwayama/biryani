@@ -20,7 +20,7 @@ module Biryani
     def serve(io)
       self.class.read_http2_magic(io)
 
-      io.write(Frame::Settings.new(setting: []).to_binary_s)
+      io.write(Frame::Settings.new(false, []).to_binary_s)
       io.flush
 
       loop do

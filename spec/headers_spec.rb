@@ -22,11 +22,11 @@ RSpec.describe Frame::Headers do
     end
     it 'should decode' do
       expect(headers3.f_type).to eq FrameType::HEADERS
-      expect(headers3.end_headers).to be true
-      expect(headers3.end_stream).to be false
-      expect(headers3.stream_id).to be 1
-      expect(headers3.stream_dependency).to be nil
-      expect(headers3.weight).to be nil
+      expect(headers3.end_headers?).to eq true
+      expect(headers3.end_stream?).to eq false
+      expect(headers3.stream_id).to eq 1
+      expect(headers3.stream_dependency).to eq nil
+      expect(headers3.weight).to eq nil
       expect(headers3.fragment).to eq 'this is dummy'
       expect(headers3.padding).to eq nil
       expect(headers3.priority?).to eq false
@@ -39,11 +39,11 @@ RSpec.describe Frame::Headers do
     end
     it 'should decode' do
       expect(headers4.f_type).to eq FrameType::HEADERS
-      expect(headers4.end_headers).to be true
-      expect(headers4.end_stream).to be false
-      expect(headers4.stream_id).to be 3
-      expect(headers4.stream_dependency).to be 20
-      expect(headers4.weight).to be 10
+      expect(headers4.end_headers?).to eq true
+      expect(headers4.end_stream?).to eq false
+      expect(headers4.stream_id).to eq 3
+      expect(headers4.stream_dependency).to eq 20
+      expect(headers4.weight).to eq 10
       expect(headers4.fragment).to eq 'this is dummy'
       expect(headers4.padding).to eq 'This is padding.'
       expect(headers4.priority?).to eq true

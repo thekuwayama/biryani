@@ -61,6 +61,21 @@ module Biryani
     def self.read_ack(uint8)
       (uint8 & 0b00000001).positive?
     end
+
+    # @return [Integer]
+    def self.to_flags(priority: false, padded: false, end_headers: false, end_stream: false, ack: false)
+      (priority ? 32 : 0) + (padded ? 8 : 0) + (end_headers ? 4 : 0) + (end_stream || ack ? 1 : 0)
+    end
+
+    # @param payload_length [Integer]
+    # @param f_type [Integer]
+    # @param flags [Integer]
+    # @param stream_id
+    #
+    # @return [String]
+    def self.to_binary_s_header(payload_length, f_type, flags, stream_id)
+      [payload_length, f_type, flags, stream_id].pack('NCCN')[1..]
+    end
   end
 end
 

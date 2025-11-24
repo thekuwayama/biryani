@@ -1,7 +1,7 @@
 module Biryani
   module Frame
     class Data
-      attr_reader :f_type, :end_stream, :stream_id, :data, :padding
+      attr_reader :f_type, :stream_id, :data, :padding
 
       # @param end_stream [Boolean]
       # @param stream_id [Integer]
@@ -20,16 +20,19 @@ module Biryani
         !@padding.nil?
       end
 
+      # @return [Boolean]
+      def end_stream?
+        @end_stream
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = [@data.bytesize + (padded? ? 1 + @padding.bytesize : 0)].pack('N1')[1..]
-        f_type = @f_type.chr
-        flags = ((padded? ? 8 : 0) + (@end_stream ? 1 : 0)).chr
-        stream_id = [@stream_id].pack('N1')
+        payload_length = @data.bytesize + (padded? ? 1 + @padding.bytesize : 0)
+        flags = Frame.to_flags(padded: padded?, end_stream: end_stream?)
         pad_length = padded? ? @padding.bytesize.chr : ''
         padding = @padding || ''
 
-        payload_length + f_type + flags + stream_id + pad_length + @data + padding
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + pad_length + @data + padding
       end
 
       # @param s [String]

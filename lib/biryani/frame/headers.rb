@@ -1,7 +1,7 @@
 module Biryani
   module Frame
     class Headers
-      attr_reader :f_type, :end_headers, :end_stream, :stream_id, :stream_dependency, :weight, :fragment, :padding
+      attr_reader :f_type, :stream_id, :stream_dependency, :weight, :fragment, :padding
 
       # @param end_headers [Boolean]
       # @param end_stream [Boolean]
@@ -34,19 +34,26 @@ module Biryani
       end
 
       # @return [Boolean]
+      def end_headers?
+        @end_headers
+      end
+
+      # @return [Boolean]
+      def end_stream?
+        @end_stream
+      end
+
+      # @return [Boolean]
       def exclusive?
         !@stream_dependency.nil? && !@weight.nil?
       end
 
       # @return [String]
-      # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
       def to_binary_s
-        payload_length = [@fragment.bytesize + (padded? ? 1 + @padding.bytesize : 0) + (priority? ? 5 : 0)].pack('N1')[1..]
-        f_type = @f_type.chr
-        flags = ((priority? ? 32 : 0) + (padded? ? 8 : 0) + (@end_headers ? 4 : 0) + (@end_stream ? 1 : 0)).chr
-        stream_id = [@stream_id].pack('N1')
+        payload_length = @fragment.bytesize + (padded? ? 1 + @padding.bytesize : 0) + (priority? ? 5 : 0)
+        flags = Frame.to_flags(priority: priority?, padded: padded?, end_headers: end_headers?, end_stream: end_stream?)
         pad_length = padded? ? @padding.bytesize.chr : ''
         stream_dependency = if priority?
                               [(exclusive? ? 2**31 : 0) | @stream_dependency].pack('N1')
@@ -56,9 +63,8 @@ module Biryani
         weight = priority? ? @weight.chr : ''
         padding = @padding || ''
 
-        payload_length + f_type + flags + stream_id + pad_length + stream_dependency + weight + @fragment + padding
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + pad_length + stream_dependency + weight + @fragment + padding
       end
-      # rubocop: enable Metrics/AbcSize
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
 

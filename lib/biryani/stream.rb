@@ -22,7 +22,7 @@ module Biryani
           when FrameType::DATA
             bucket.data += frame.data
 
-            if frame.end_stream
+            if frame.end_stream?
               # TODO: Hello, world!
               tx << Frame::Headers.new(true, false, frame.stream_id, nil, nil, encoder.encode([[':status', '200']]), nil)
               tx << Frame::Data.new(true, frame.stream_id, 'Hello, world!', nil)
@@ -32,7 +32,7 @@ module Biryani
             fields = decoder.decode(frame.fragment)
             bucket.fields += fields
 
-            if frame.end_stream
+            if frame.end_stream?
               # TODO: Hello, world!
               tx << Frame::Headers.new(true, false, frame.stream_id, nil, nil, encoder.encode([[':status', '200']]), nil)
               tx << Frame::Data.new(true, frame.stream_id, 'Hello, world!', nil)

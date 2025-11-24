@@ -14,8 +14,8 @@ RSpec.describe Frame::Data do
     end
     it 'should decode' do
       expect(data2.f_type).to eq FrameType::DATA
-      expect(data2.end_stream).to be false
-      expect(data2.stream_id).to be 2
+      expect(data2.end_stream?).to eq false
+      expect(data2.stream_id).to eq 2
       expect(data2.data).to eq 'Hello, world!'
       expect(data2.padding).to eq 'Howdy!'
       expect(data2.padded?).to eq true
