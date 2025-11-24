@@ -130,9 +130,9 @@ module Biryani
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
 
-    # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
-    def value
-      @state
+    # @return [Boolean]
+    def closed?
+      @state == :closed
     end
   end
 end

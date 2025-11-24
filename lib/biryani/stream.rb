@@ -54,7 +54,7 @@ module Biryani
 
     # @return [Boolean]
     def closed?
-      @state == closed
+      @state.closed?
     end
   end
 end
