@@ -1,16 +1,36 @@
 module Biryani
   module Frame
-    class Goaway < BinData::Record
-      endian :big
-      uint24 :payload_length, value: -> { debug.bytesize + 8 }
-      uint8  :f_type, value: -> { FrameType::GOAWAY }
-      bit8   :unused
-      bit1   :reserved1
-      bit31  :stream_id, value: -> { 0x00 }
-      bit1   :reserved2
-      bit31  :last_stream_id
-      uint32 :error_code
-      string :debug, read_length: -> { payload_length - 8 }
+    class Goaway
+      attr_reader :f_type, :stream_id, :last_stream_id, :error_code, :debug
+
+      # @param last_stream_id [Integer]
+      # @param error_code [Integer]
+      # @param debug [String]
+      def initialize(last_stream_id, error_code, debug)
+        @f_type = FrameType::GOAWAY
+        @stream_id = 0
+        @last_stream_id = last_stream_id
+        @error_code = error_code
+        @debug = debug
+      end
+
+      # @return [String]
+      def to_binary_s
+        payload_length = @debug.bytesize + 8
+        flags = 0x00
+
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + [@last_stream_id, @error_code].pack('NN') + @debug
+      end
+
+      # @param s [String]
+      #
+      # @return [Data]
+      def self.read(s)
+        last_stream_id, error_code = s[9..16].unpack('NN')
+        debug = s[17..]
+
+        Goaway.new(last_stream_id, error_code, debug)
+      end
     end
   end
 end
