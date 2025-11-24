@@ -1,14 +1,40 @@
 module Biryani
   module Frame
-    class Ping < BinData::Record
-      endian :big
-      uint24 :payload_length, value: -> { 0x08 }
-      uint8  :f_type, value: -> { FrameType::PING }
-      bit7   :unused
-      bit1   :ack
-      bit1   :reserved
-      bit31  :stream_id, value: -> { 0x00 }
-      string :opaque, read_length: -> { 0x08 }
+    class Ping
+      attr_reader :f_type, :stream_id, :opaque
+
+      # @param ack [Boolean]
+      # @param opaque [String]
+      def initialize(ack, opaque)
+        @f_type = FrameType::PING
+        @ack = ack
+        @stream_id = 0
+        @opaque = opaque
+      end
+
+      # @return [Boolean]
+      def ack?
+        @ack
+      end
+
+      # @return [String]
+      def to_binary_s
+        payload_length = 8
+        flags = Frame.to_flags(ack: ack?)
+
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + opaque
+      end
+
+      # @param s [String]
+      #
+      # @return [Ping]
+      def self.read(s)
+        _, _, uint8, = Frame.read_header(s)
+        ack = Frame.read_ack(uint8)
+        opaque = s[9..]
+
+        Ping.new(ack, opaque)
+      end
     end
   end
 end
