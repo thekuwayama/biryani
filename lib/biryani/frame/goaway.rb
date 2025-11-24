@@ -24,7 +24,7 @@ module Biryani
 
       # @param s [String]
       #
-      # @return [Data]
+      # @return [Goaway]
       def self.read(s)
         last_stream_id, error_code = s[9..16].unpack('NN')
         debug = s[17..]

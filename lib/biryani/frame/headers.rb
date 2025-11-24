@@ -43,30 +43,16 @@ module Biryani
         @end_stream
       end
 
-      # @return [Boolean]
-      def exclusive?
-        !@stream_dependency.nil? && !@weight.nil?
-      end
-
       # @return [String]
-      # rubocop: disable Metrics/CyclomaticComplexity
-      # rubocop: disable Metrics/PerceivedComplexity
       def to_binary_s
         payload_length = @fragment.bytesize + (padded? ? 1 + @padding.bytesize : 0) + (priority? ? 5 : 0)
         flags = Frame.to_flags(priority: priority?, padded: padded?, end_headers: end_headers?, end_stream: end_stream?)
         pad_length = padded? ? @padding.bytesize.chr : ''
-        stream_dependency = if priority?
-                              [(exclusive? ? 2**31 : 0) | @stream_dependency].pack('N1')
-                            else
-                              ''
-                            end
-        weight = priority? ? @weight.chr : ''
+        stream_dependency_weight = priority? ? [@stream_dependency, @weight].pack('NC') : ''
         padding = @padding || ''
 
-        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + pad_length + stream_dependency + weight + @fragment + padding
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + pad_length + stream_dependency_weight + @fragment + padding
       end
-      # rubocop: enable Metrics/CyclomaticComplexity
-      # rubocop: enable Metrics/PerceivedComplexity
 
       # @param s [String]
       #
@@ -80,28 +66,24 @@ module Biryani
         end_stream = Frame.read_end_stream(flags)
 
         if priority && padded
-          fragment_length = payload_length
-          pad_length = s[9].unpack1('C')
-          fragment_length -= pad_length + 6
-          # exclusive = (s[10..13].unpack1('N') / 2**31).positive?
-          stream_dependency = s[10..13].unpack1('N') % 2**31
-          weight = s[14].unpack1('C')
+          pad_length, stream_dependency, weight = s[9..14].unpack('CNC')
+          fragment_length = payload_length - pad_length - 6
+          # exclusive = (stream_dependency / 2**31).positive?
+          stream_dependency %= 2**31
           fragment = s[15...15 + fragment_length]
           padding = s[15 + fragment_length..]
         elsif priority
-          # exclusive = (s[9..12].unpack1('N') / 2**31).positive?
-          stream_dependency = s[9..12].unpack1('N') % 2**31
-          weight = s[13].unpack1('C')
+          stream_dependency, weight = s[9..13].unpack('NC')
+          # exclusive = (stream_dependency / 2**31).positive?
+          stream_dependency %= 2**31
           fragment = s[14..]
         elsif padded
-          fragment_length = payload_length
           pad_length = s[9].unpack1('C')
-          fragment_length -= pad_length
+          fragment_length = payload_length - pad_length
           fragment = s[10...10 + fragment_length]
           padding = s[10 + fragment_length..]
         else
           fragment = s[9..]
-          padding = nil
         end
 
         Headers.new(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)
