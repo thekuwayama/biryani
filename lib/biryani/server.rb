@@ -6,14 +6,15 @@ module Biryani
 
     # @param socket [Socket]
     def run(socket)
+      connections = []
       loop do
-        # TODO: ractor pool using Etc.nprocessors
-        io = socket.accept
-
-        conn = Connection.new
-        conn.serve(io)
-        io&.close
+        connections << Ractor.new(socket.accept) do |io|
+          conn = Connection.new
+          conn.serve(io)
+          io&.close
+        end
       end
+      # TODO: close ractor
     end
   end
 end
