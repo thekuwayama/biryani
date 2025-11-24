@@ -1,15 +1,41 @@
 module Biryani
   module Frame
-    class Continuation < BinData::Record
-      endian :big
-      uint24 :payload_length, value: -> { fragment.bytesize }
-      uint8  :f_type, value: -> { FrameType::CONTINUATION }
-      bit5   :unused1
-      bit1   :end_headers
-      bit2   :unused2
-      bit1   :reserved
-      bit31  :stream_id
-      string :fragment, read_length: -> { payload_length }
+    class Continuation
+      attr_reader :f_type, :stream_id, :fragment
+
+      # @param end_headers [Boolean]
+      # @param stream_id [Integer]
+      # @param fragment [String]
+      def initialize(end_headers, stream_id, fragment)
+        @f_type = FrameType::CONTINUATION
+        @end_headers = end_headers
+        @stream_id = stream_id
+        @fragment = fragment
+      end
+
+      # @return [Boolean]
+      def end_headers?
+        @end_headers
+      end
+
+      # @return [String]
+      def to_binary_s
+        payload_length = @fragment.bytesize
+        flags = Frame.to_flags(end_headers: end_headers?)
+
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + @fragment
+      end
+
+      # @param s [String]
+      #
+      # @return [Data]
+      def self.read(s)
+        _, _, uint8, stream_id = Frame.read_header(s)
+        end_headers = Frame.read_end_headers(uint8)
+        fragment = s[9..]
+
+        Continuation.new(end_headers, stream_id, fragment)
+      end
     end
   end
 end
