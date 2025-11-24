@@ -70,15 +70,16 @@ module Biryani
 
         if (st = @streams[stream_id])
           stream = st.stream
-          stream.transition_state!(frame, :recv)
-          @streams.delete(stream_id) if stream.closed?
-
           tx = st.tx
           stream.rx << [frame, tx]
+          stream.transition_state!(frame, :recv)
+
+          @streams.delete(stream_id) if stream.closed?
         else
           stream = Stream.new
           tx = channel
           stream.rx << [frame, tx]
+          stream.transition_state!(frame, :send)
 
           @streams[stream_id] = StreamTx.new(stream, tx)
         end
@@ -87,12 +88,18 @@ module Biryani
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
+    # @return [Ractor]
     def channel
       Ractor.new do
         loop do
           Ractor.yield Ractor.receive
         end
       end
+    end
+
+    # @return [Boolean]
+    def closed?
+      false
     end
   end
 end

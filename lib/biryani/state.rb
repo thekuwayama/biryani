@@ -57,9 +57,9 @@ module Biryani
         state
       in [_, FrameType::GOAWAY, _]
         state
-      in [:idle, FrameType::HEADERS, :recv] if frame.end_stream.positive?
+      in [:idle, FrameType::HEADERS, :recv] if frame.end_stream?
         :half_closed_remote
-      in [:idle, FrameType::HEADERS, :send] if frame.end_stream.positive?
+      in [:idle, FrameType::HEADERS, :send] if frame.end_stream?
         :half_closed_local
       in [:idle, FrameType::HEADERS, _]
         :open
@@ -69,13 +69,13 @@ module Biryani
         :reserved_local
       in [:idle, FrameType::PRIORITY, _]
         :idle
-      in [:open, FrameType::DATA, :recv] if frame.end_stream.positive?
+      in [:open, FrameType::DATA, :recv] if frame.end_stream?
         :half_closed_remote
-      in [:open, FrameType::HEADERS, :recv] if frame.end_stream.positive?
+      in [:open, FrameType::HEADERS, :recv] if frame.end_stream?
         :half_closed_remote
-      in [:open, FrameType::DATA, :send] if frame.end_stream.positive?
+      in [:open, FrameType::DATA, :send] if frame.end_stream?
         :half_closed_local
-      in [:open, FrameType::HEADERS, :send] if frame.end_stream.positive?
+      in [:open, FrameType::HEADERS, :send] if frame.end_stream?
         :half_closed_local
       in [:open, FrameType::RST_STREAM, _]
         :closed
@@ -95,17 +95,17 @@ module Biryani
         :half_closed_local
       in [:half_closed_local, FrameType::RST_STREAM, :send]
         :closed
-      in [:half_closed_local, FrameType::DATA, :recv] if f.end_stream.positive?
+      in [:half_closed_local, FrameType::DATA, :recv] if f.end_stream?
         :closed
-      in [:half_closed_local, FrameType::HEADERS, :recv] if f.end_stream.positive?
+      in [:half_closed_local, FrameType::HEADERS, :recv] if f.end_stream?
         :closed
       in [:half_closed_local, FrameType::RST_STREAM, :recv]
         :closed
       in [:half_closed_local, _, :recv]
         :half_closed_local
-      in [:half_closed_remote, FrameType::DATA, :send] if f.end_stream.positive?
+      in [:half_closed_remote, FrameType::DATA, :send] if f.end_stream?
         :closed
-      in [:half_closed_remote, FrameType::HEADERS, :send] if f.end_stream.positive?
+      in [:half_closed_remote, FrameType::HEADERS, :send] if f.end_stream?
         :closed
       in [:half_closed_remote, FrameType::RST_STREAM, :send]
         :closed
