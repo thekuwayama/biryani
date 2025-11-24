@@ -1,26 +1,62 @@
 module Biryani
   module Frame
-    class PushPromise < BinData::Record
-      endian :big
-      uint24 :payload_length, value: -> { fragment.bytesize + 4 + (pad_length + 1) * padded.value }
-      uint8  :f_type, value: -> { FrameType::PUSH_PROMISE }
-      bit4   :unused1
-      bit1   :padded
-      bit1   :end_headers
-      bit2   :unused2
-      bit1   :reserved1
-      bit31  :stream_id
-      uint8  :pad_length, onlyif: -> { padded.positive? }, value: -> { padding.bytesize }
-      bit1   :reserved2
-      bit31  :promised_stream_id
-      string :fragment, read_length: :fragment_length
-      string :padding, onlyif: -> { padded.positive? }, read_length: -> { pad_length }
+    class PushPromise
+      attr_reader :f_type, :stream_id, :promised_stream_id, :fragment, :padding
 
-      def fragment_length
-        len = payload_length - 4
-        len -= pad_length + 1 if padded.positive?
+      # @param end_headers [Boolean]
+      # @param stream_id [Integer]
+      # @param promised_stream_id [Integer]
+      # @param fragment [String]
+      # @param padding [String, nil]
+      def initialize(end_headers, stream_id, promised_stream_id, fragment, padding)
+        @f_type = FrameType::PUSH_PROMISE
+        @end_headers = end_headers
+        @stream_id = stream_id
+        @promised_stream_id = promised_stream_id
+        @fragment = fragment
+        @padding = padding
+      end
 
-        len
+      # @return [Boolean]
+      def padded?
+        !@padding.nil?
+      end
+
+      # @return [Boolean]
+      def end_headers?
+        @end_headers
+      end
+
+      # @return [String]
+      def to_binary_s
+        payload_length = @fragment.bytesize + 4 + (padded? ? 1 + @padding.bytesize : 0)
+        flags = Frame.to_flags(padded: padded?, end_headers: end_headers?)
+        pad_length = padded? ? @padding.bytesize.chr : ''
+        padding = @padding || ''
+
+        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + pad_length + [@promised_stream_id].pack('N') + @fragment + padding
+      end
+
+      # @param s [String]
+      #
+      # @return [PushPromise]
+      def self.read(s)
+        payload_length, _, flags, stream_id = Frame.read_header(s)
+        padded = Frame.read_padded(flags)
+        end_headers = Frame.read_end_headers(flags)
+
+        if padded
+          pad_length = s[9].unpack1('C')
+          promised_stream_id = s[10..13].unpack1('N')
+          fragment_length = payload_length - pad_length - 5
+          fragment = s[14...14 + fragment_length]
+          padding = s[14 + fragment_length..]
+        else
+          promised_stream_id = s[9..12].unpack1('N')
+          fragment = s[13..]
+        end
+
+        PushPromise.new(end_headers, stream_id, promised_stream_id, fragment, padding)
       end
     end
   end
