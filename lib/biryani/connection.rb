@@ -14,6 +14,8 @@ module Biryani
 
     def initialize
       @streams = {}
+      @encoder = HPACK::Encoder.new(4096)
+      @decoder = HPACK::Decoder.new(4096)
     end
 
     # @param io [IO]
@@ -30,6 +32,7 @@ module Biryani
         txs = @streams.values.map(&:tx)
         until txs.empty?
           _, send_frame = Ractor.select(*txs)
+          send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           io.write(send_frame.to_binary_s)
           @streams.delete(send_frame.stream_id)
         end
@@ -46,6 +49,7 @@ module Biryani
 
     # @param frame [Object]
     # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
     def dispatch(frame)
       stream_id = frame.stream_id
@@ -66,6 +70,8 @@ module Biryani
       else
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
           abort 'protocol_error' # TODO: send error
+        elsif typ == FrameType::HEADERS
+          frame = frame.decode(@decoder)
         end
 
         if (st = @streams[stream_id])
@@ -86,6 +92,7 @@ module Biryani
       end
     end
     # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @return [Ractor]

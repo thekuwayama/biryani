@@ -88,6 +88,15 @@ module Biryani
 
         Headers.new(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)
       end
+
+      # @param decoder [Decoder]
+      #
+      # @return [RawHeaders]
+      def decode(decoder)
+        fields = decoder.decode(@fragment)
+
+        RawHeaders.new(@end_headers, @end_stream, @stream_id, @stream_dependency, @weight, fields, @padding)
+      end
       # rubocop: enable Metrics/AbcSize
     end
   end
