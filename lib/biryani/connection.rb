@@ -34,7 +34,6 @@ module Biryani
           _, send_frame = Ractor.select(*txs)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           io.write(send_frame.to_binary_s)
-          @streams.delete(send_frame.stream_id)
         end
 
         # TODO: close connection
@@ -85,7 +84,7 @@ module Biryani
           stream = Stream.new
           tx = channel
           stream.rx << [frame, tx]
-          stream.transition_state!(frame, :send)
+          stream.transition_state!(frame, :recv)
 
           @streams[stream_id] = StreamTx.new(stream, tx)
         end
