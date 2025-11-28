@@ -1,5 +1,6 @@
 require_relative 'frame'
 require_relative 'state'
+require_relative 'window'
 
 module Biryani
   class Stream
@@ -50,6 +51,37 @@ module Biryani
     # @return [Boolean]
     def closed?
       @state.closed?
+    end
+  end
+
+  class StreamContext
+    attr_accessor :stream, :tx, :send_window, :recv_window
+
+    def initialize
+      @stream = Stream.new
+      @tx = channel
+      @send_window = Window.new
+      @recv_window = Window.new
+      @queue = []
+    end
+
+    # @return [Ractor]
+    def channel
+      Ractor.new do
+        loop do
+          Ractor.yield Ractor.receive
+        end
+      end
+    end
+
+    # param frame [Object]
+    def enqueue(frame)
+      @queue << frame
+    end
+
+    # @return [Object] frame
+    def dequeue
+      @queue.shift
     end
   end
 end
