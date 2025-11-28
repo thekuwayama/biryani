@@ -1,5 +1,6 @@
 require_relative 'frame'
 require_relative 'stream'
+require_relative 'window'
 
 module Biryani
   class Connection
@@ -10,12 +11,12 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
-    StreamTx = Struct.new(:stream, :tx)
-
     def initialize
-      @streams = {}
+      @stream_ctxs = {} # Hash<Integer, StreamContext>
       @encoder = HPACK::Encoder.new(4096)
       @decoder = HPACK::Decoder.new(4096)
+      @send_window = Window.new
+      @recv_window = Window.new
     end
 
     # @param io [IO]
@@ -29,11 +30,11 @@ module Biryani
         recv_frame = Frame.read(io)
         dispatch(recv_frame)
 
-        txs = @streams.values.map(&:tx)
+        txs = @stream_ctxs.values.map(&:tx)
         until txs.empty?
           _, send_frame = Ractor.select(*txs)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
-          io.write(send_frame.to_binary_s)
+          send(io, send_frame)
         end
 
         # TODO: close connection
@@ -48,7 +49,6 @@ module Biryani
 
     # @param frame [Object]
     # rubocop: disable Metrics/CyclomaticComplexity
-    # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
     def dispatch(frame)
       stream_id = frame.stream_id
@@ -64,7 +64,8 @@ module Biryani
         when FrameType::GOAWAY
           # TODO
         when FrameType::WINDOW_UPDATE
-          # TODO
+          handle_window_update(frame)
+          # TODO: send buffering data
         end
       else
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
@@ -73,39 +74,52 @@ module Biryani
           frame = frame.decode(@decoder)
         end
 
-        if (st = @streams[stream_id])
-          stream = st.stream
-          tx = st.tx
-          stream.rx << [frame, tx]
-          stream.transition_state!(frame, :recv)
+        ctx = @stream_ctxs[stream_id] || StreamContext.new
+        stream = ctx.stream
+        tx = ctx.tx
+        stream.rx << [frame, tx]
+        stream.transition_state!(frame, :recv)
 
-          @streams.delete(stream_id) if stream.closed?
+        if stream.closed?
+          @stream_ctxs.delete(stream_id)
         else
-          stream = Stream.new
-          tx = channel
-          stream.rx << [frame, tx]
-          stream.transition_state!(frame, :recv)
-
-          @streams[stream_id] = StreamTx.new(stream, tx)
+          @stream_ctxs[stream_id] = ctx
         end
       end
     end
     # rubocop: enable Metrics/CyclomaticComplexity
-    # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
-
-    # @return [Ractor]
-    def channel
-      Ractor.new do
-        loop do
-          Ractor.yield Ractor.receive
-        end
-      end
-    end
 
     # @return [Boolean]
     def closed?
       false
+    end
+
+    # @param io [IO]
+    # @param frame [Object]
+    def send(io, frame)
+      if frame.f_type != FrameType::DATA
+        io.write(frame.to_binary_s)
+        return
+      end
+
+      stream_id = frame.stream_id
+      if @send_window.available?(frame.length) && @stream_ctxs[stream_id].send_window.available?(frame.length)
+        io.write(frame.to_binary_s)
+        @send_window.consume!(frame.length)
+        @stream_ctxs[stream_id].send_window.consume!(frame.length)
+        return
+      end
+
+      @stream_ctxs[stream_id].enqueue(frame)
+    end
+
+    def handle_window_update(frame)
+      if frame.stream_id.zero?
+        @send_window.increase!(frame.window_size_increment)
+      else
+        @stream_ctxs[frame.stream_id].send_window.consume!(frame.length)
+      end
     end
   end
 end
