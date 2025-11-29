@@ -1,5 +1,6 @@
 require_relative 'frame'
 require_relative 'stream'
+require_relative 'stream_context'
 require_relative 'window'
 
 module Biryani
