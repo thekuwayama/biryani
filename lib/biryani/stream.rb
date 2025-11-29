@@ -1,6 +1,3 @@
-require_relative 'frame'
-require_relative 'state'
-
 module Biryani
   class Stream
     attr_accessor :rx

@@ -1,5 +1,3 @@
-require_relative 'field'
-
 module Biryani
   module HPACK
     module Fields

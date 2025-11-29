@@ -1,8 +1,3 @@
-require_relative 'dynamic_table'
-require_relative 'integer'
-require_relative 'option'
-require_relative 'string'
-
 module Biryani
   module HPACK
     # rubocop: disable Metrics/ModuleLength

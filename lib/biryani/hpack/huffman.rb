@@ -1,5 +1,3 @@
-require_relative '../error'
-
 module Biryani
   module HPACK
     # rubocop: disable Metrics/ModuleLength

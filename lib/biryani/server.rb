@@ -1,5 +1,3 @@
-require_relative 'connection'
-
 module Biryani
   class Server
     def initialize; end

@@ -1,8 +1,3 @@
-require_relative 'frame'
-require_relative 'stream'
-require_relative 'stream_context'
-require_relative 'window'
-
 module Biryani
   class Connection
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze

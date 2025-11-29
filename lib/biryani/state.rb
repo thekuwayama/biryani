@@ -1,5 +1,3 @@
-require_relative 'frame'
-
 module Biryani
   class State
     def initialize

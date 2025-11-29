@@ -1,5 +1,3 @@
-require_relative 'option'
-
 module Biryani
   module HPACK
     class DynamicTable

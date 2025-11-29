@@ -1,5 +1,3 @@
-require_relative 'window'
-
 module Biryani
   class StreamContext
     attr_accessor :stream, :tx, :send_window, :recv_window

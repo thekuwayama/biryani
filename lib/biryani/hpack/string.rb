@@ -1,6 +1,3 @@
-require_relative 'huffman'
-require_relative 'integer'
-
 module Biryani
   module HPACK
     module String

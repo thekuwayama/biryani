@@ -1,6 +1,3 @@
-require_relative 'dynamic_table'
-require_relative 'fields'
-
 module Biryani
   module HPACK
     class Encoder

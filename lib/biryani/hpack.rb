@@ -72,5 +72,12 @@ module Biryani
   end
 end
 
-require_relative 'hpack/encoder'
 require_relative 'hpack/decoder'
+require_relative 'hpack/dynamic_table'
+require_relative 'hpack/encoder'
+require_relative 'hpack/field'
+require_relative 'hpack/fields'
+require_relative 'hpack/huffman'
+require_relative 'hpack/integer'
+require_relative 'hpack/option'
+require_relative 'hpack/string'
