@@ -18,7 +18,7 @@ module Biryani
       @decoder = HPACK::Decoder.new(4096)
       @send_window = Window.new
       @recv_window = Window.new
-      @queue = []
+      @queue = [] # Array<Data>
     end
 
     # @param io [IO]
