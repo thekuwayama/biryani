@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe HPACK::Encoder do
-  context 'Encoder' do
+  context do
     let(:encoder) do
       HPACK::Encoder.new(256)
     end

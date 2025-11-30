@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::PushPromise do
-  context 'PushPromise' do
+  context do
     let(:push_promise1) do
       Frame::PushPromise.new(true, 10, 12, 'this is dummy', 'Howdy!')
     end

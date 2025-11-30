@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Headers do
-  context 'Headers' do
+  context do
     let(:headers1) do
       Frame::Headers.new(true, false, 1, nil, nil, 'this is dummy', nil)
     end

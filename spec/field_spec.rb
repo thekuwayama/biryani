@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe HPACK::Field do
-  context 'Field' do
+  context do
     let(:dynamic_table) do
       HPACK::DynamicTable.new(4096)
     end

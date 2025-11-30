@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Data do
-  context 'Data' do
+  context do
     let(:data1) do
       Frame::Data.new(false, 2, 'Hello, world!', 'Howdy!')
     end

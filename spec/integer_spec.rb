@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe HPACK::Integer do
-  context 'Integer' do
+  context do
     let(:mask) do
       0b00000000
     end

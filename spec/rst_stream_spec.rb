@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::RstStream do
-  context 'RstStream' do
+  context do
     let(:rst_stream1) do
       Frame::RstStream.new(5, 8)
     end

@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Goaway do
-  context 'Goaway' do
+  context do
     let(:goaway1) do
       Frame::Goaway.new(30, 9, 'hpack is broken')
     end

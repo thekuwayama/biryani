@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe HPACK::Huffman do
-  context 'Huffman' do
+  context do
     it 'should encode' do
       expect(HPACK::Huffman.encode('www.example.com')).to eq "\xf1\xe3\xc2\xe5\xf2\x3a\x6b\xa0\xab\x90\xf4\xff".b
       expect(HPACK::Huffman.encode('no-cache')).to eq "\xa8\xeb\x10\x64\x9c\xbf".b

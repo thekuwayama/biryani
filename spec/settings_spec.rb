@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Settings do
-  context 'Settings' do
+  context do
     let(:settings1) do
       Frame::Settings.new(false, [[1, 8192], [3, 5000]])
     end

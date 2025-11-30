@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Ping do
-  context 'Ping' do
+  context do
     let(:ping1) do
       Frame::Ping.new(false, 'deadbeef')
     end

@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::WindowUpdate do
-  context 'WindowUpdate' do
+  context do
     let(:window_update1) do
       Frame::WindowUpdate.new(50, 1000)
     end

@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Continuation do
-  context 'Continuation' do
+  context do
     let(:continuation1) do
       Frame::Continuation.new(false, 50, '')
     end

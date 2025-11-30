@@ -1,7 +1,7 @@
 require_relative 'spec_helper'
 
 RSpec.describe Frame::Priority do
-  context 'Priority' do
+  context do
     let(:priority1) do
       Frame::Priority.new(9, 11, 8)
     end
