@@ -19,6 +19,7 @@ RSpec.describe Frame::Data do
       expect(data2.data).to eq 'Hello, world!'
       expect(data2.padding).to eq 'Howdy!'
       expect(data2.padded?).to eq true
+      expect(data2.length).to eq 20
     end
   end
 end

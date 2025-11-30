@@ -26,5 +26,10 @@ module Biryani
       @buffer = @buffer.each_with_index.filter { |_, i| datas.keys.include?(i) }.map(&:first)
       datas.values
     end
+
+    # @return [Integer]
+    def length
+      @buffer.length
+    end
   end
 end
