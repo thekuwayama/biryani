@@ -25,7 +25,5 @@ module Biryani
     def length
       @window
     end
-
-    alias size length
   end
 end
