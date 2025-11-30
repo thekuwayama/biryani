@@ -9,7 +9,7 @@ Metrics/AbcSize:
 
 Metrics/BlockLength:
   Exclude:
-    - 'spec/*.rb'
+    - 'spec/**/*'
 
 Metrics/ClassLength:
   Max: 200
