@@ -33,7 +33,7 @@ module Biryani
         until txs.empty?
           _, send_frame = Ractor.select(*txs)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
-          send(io, send_frame)
+          self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
         end
 
         # TODO: close connection
@@ -101,21 +101,24 @@ module Biryani
 
     # @param io [IO]
     # @param frame [Object]
-    def send(io, frame)
+    # @param send_window [Window]
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param data_buffer [DataBuffer]
+    def self.send(io, frame, send_window, stream_ctxs, data_buffer)
       if frame.f_type != FrameType::DATA
         io.write(frame.to_binary_s)
         return
       end
 
       data = frame
-      if self.class.sendable?(data, @send_window, @stream_ctxs)
+      if sendable?(data, send_window, stream_ctxs)
         io.write(data.to_binary_s)
-        @send_window.consume!(data.length)
-        @stream_ctxs[data.stream_id].send_window.consume!(data.length)
+        send_window.consume!(data.length)
+        stream_ctxs[data.stream_id].send_window.consume!(data.length)
         return
       end
 
-      @data_buffer << data
+      data_buffer << data
     end
 
     # @param io [IO]
