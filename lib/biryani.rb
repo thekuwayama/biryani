@@ -1,4 +1,5 @@
 require_relative 'biryani/connection'
+require_relative 'biryani/data_buffer'
 require_relative 'biryani/error'
 require_relative 'biryani/frame'
 require_relative 'biryani/hpack'

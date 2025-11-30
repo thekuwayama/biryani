@@ -13,7 +13,7 @@ module Biryani
       @decoder = HPACK::Decoder.new(4096)
       @send_window = Window.new
       @recv_window = Window.new
-      @queue = [] # Array<Data>
+      @data_buffer = DataBuffer.new
     end
 
     # @param io [IO]
@@ -66,7 +66,7 @@ module Biryani
           []
         when FrameType::WINDOW_UPDATE
           self.class.handle_window_update(frame, @send_window, @stream_ctxs)
-          dequeue
+          @data_buffer.take!(@send_window, @stream_ctxs)
         end
       else
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
@@ -99,35 +99,6 @@ module Biryani
       false
     end
 
-    # @param data [Data]
-    def enqueue(data)
-      @queue << data
-    end
-
-    # @return [Array<Data>]
-    def dequeue
-      datas = {}
-      @queue.each_with_index.each do |data, i|
-        next unless sendable?(data)
-
-        @send_window.consume!(data.length)
-        @stream_ctxs[data.stream_id].send_window.consume!(data.length)
-        datas[i] = data
-      end
-
-      @queue = @queue.each_with_index.filter { |_, i| datas.keys.include?(i) }.map(&:first)
-      datas.values
-    end
-
-    # @param data [Data]
-    #
-    # @return [Boolean]
-    def sendable?(data)
-      length = data.length
-      stream_id = data.stream_id
-      @send_window.available?(length) && @stream_ctxs[stream_id].send_window.available?(length)
-    end
-
     # @param io [IO]
     # @param frame [Object]
     def send(io, frame)
@@ -137,14 +108,20 @@ module Biryani
       end
 
       data = frame
-      if sendable?(data)
+      if self.class.sendable?(data, @send_window, @stream_ctxs)
         io.write(data.to_binary_s)
         @send_window.consume!(data.length)
         @stream_ctxs[data.stream_id].send_window.consume!(data.length)
         return
       end
 
-      enqueue(data)
+      @data_buffer << data
+    end
+
+    # @param io [IO]
+    def self.read_http2_magic(io)
+      s = io.read(CONNECTION_PREFACE_LENGTH)
+      raise 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
     end
 
     # @param window_update [WindowUpdate]
@@ -165,10 +142,15 @@ module Biryani
       Frame::Ping.new(true, ping.opaque) unless ping.ack?
     end
 
-    # @param io [IO]
-    def self.read_http2_magic(io)
-      s = io.read(CONNECTION_PREFACE_LENGTH)
-      raise 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
+    # @param data [Data]
+    # @param send_window [Window]
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    #
+    # @return [Boolean]
+    def self.sendable?(data, send_window, stream_ctxs)
+      length = data.length
+      stream_id = data.stream_id
+      send_window.available?(length) && stream_ctxs[stream_id].send_window.available?(length)
     end
   end
 end
