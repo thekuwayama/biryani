@@ -157,7 +157,7 @@ module Biryani
     # @param io [IO]
     def self.read_http2_magic(io)
       s = io.read(CONNECTION_PREFACE_LENGTH)
-      abort 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
+      raise 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
     end
   end
 end
