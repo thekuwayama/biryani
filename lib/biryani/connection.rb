@@ -63,7 +63,7 @@ module Biryani
           # TODO
           []
         when FrameType::WINDOW_UPDATE
-          handle_window_update(frame)
+          self.class.handle_window_update(frame, @send_window, @stream_ctxs)
           dequeue
         end
       else
@@ -146,11 +146,13 @@ module Biryani
     end
 
     # @param window_update [WindowUpdate]
-    def handle_window_update(window_update)
+    # @param send_window [Window]
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    def self.handle_window_update(window_update, send_window, stream_ctxs)
       if window_update.stream_id.zero?
-        @send_window.increase!(window_update.window_size_increment)
+        send_window.increase!(window_update.window_size_increment)
       else
-        @stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
+        stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
       end
     end
 

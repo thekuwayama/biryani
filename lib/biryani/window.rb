@@ -20,5 +20,12 @@ module Biryani
     def increase!(length)
       @window += length
     end
+
+    # @return [Integer]
+    def length
+      @window
+    end
+
+    alias size length
   end
 end
