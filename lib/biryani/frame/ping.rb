@@ -31,7 +31,7 @@ module Biryani
       def self.read(s)
         _, _, flags, = Frame.read_header(s)
         ack = Frame.read_ack(flags)
-        opaque = s[9..]
+        opaque = s[9..] # TODO: frame_size_error
 
         Ping.new(ack, opaque)
       end

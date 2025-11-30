@@ -25,8 +25,8 @@ module Biryani
 
       loop do
         recv_frame = Frame.read(io)
-        dispatch(recv_frame).each do |data|
-          io.write(data.to_binary_s)
+        dispatch(recv_frame).each do |frame|
+          io.write(frame.to_binary_s)
         end
 
         txs = @stream_ctxs.values.map(&:tx)
@@ -42,7 +42,7 @@ module Biryani
 
     # @param frame [Object]
     #
-    # @return [Array<Data>]
+    # @return [Array<Object>] frames
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
@@ -57,7 +57,9 @@ module Biryani
           # TODO
           []
         when FrameType::PING
-          # TODO
+          ping_ack = self.class.handle_ping(frame)
+          return [ping_ack] unless ping_ack.nil?
+
           []
         when FrameType::GOAWAY
           # TODO
@@ -154,6 +156,13 @@ module Biryani
       else
         stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
       end
+    end
+
+    # @param ping [Ping]
+    #
+    # @param [Ping, nil]
+    def self.handle_ping(ping)
+      Frame::Ping.new(true, ping.opaque) unless ping.ack?
     end
 
     # @param io [IO]
