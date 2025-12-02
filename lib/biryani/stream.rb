@@ -13,6 +13,8 @@ module Biryani
           frame, tx = Ractor.receive
 
           case frame.f_type
+          when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
+            abort 'protocol_error' # TODO: send error
           when FrameType::DATA
             bucket.data += frame.data
 
