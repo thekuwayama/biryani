@@ -43,6 +43,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
@@ -54,7 +55,9 @@ module Biryani
         when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
           abort 'protocol_error' # TODO: send error
         when FrameType::SETTINGS
-          # TODO
+          settings_ack = self.class.handle_settings(frame)
+          return [settings_ack] unless settings_ack.nil?
+
           []
         when FrameType::PING
           ping_ack = self.class.handle_ping(frame)
@@ -90,6 +93,7 @@ module Biryani
         []
       end
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
@@ -140,10 +144,15 @@ module Biryani
 
     # @param ping [Ping]
     #
-    # @param [Ping, nil]
+    # @return [Ping, nil]
     def self.handle_ping(ping)
       Frame::Ping.new(true, ping.opaque) unless ping.ack?
     end
+
+    # @param settings [Settings]
+    #
+    # @return [Settings, nil]
+    def self.handle_settings(settings); end
 
     # @param data [Data]
     # @param send_window [Window]
