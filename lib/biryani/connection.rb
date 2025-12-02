@@ -32,8 +32,8 @@ module Biryani
       @send_window = Window.new
       @recv_window = Window.new
       @data_buffer = DataBuffer.new
-      @local_settings = DEFAULT_SETTINGS # Hash<Integer, Integer>
-      @remote_settings = DEFAULT_SETTINGS # Hash<Integer, Integer>
+      @send_settings = DEFAULT_SETTINGS.dup # Hash<Integer, Integer>
+      @recv_settings = DEFAULT_SETTINGS.dup # Hash<Integer, Integer>
     end
 
     # @param io [IO]
@@ -75,7 +75,7 @@ module Biryani
         when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
           abort 'protocol_error' # TODO: send error
         when FrameType::SETTINGS
-          settings_ack = self.class.handle_settings(frame)
+          settings_ack = self.class.handle_settings(frame, @send_settings)
           return [settings_ack] unless settings_ack.nil?
 
           []
@@ -170,9 +170,15 @@ module Biryani
     end
 
     # @param settings [Settings]
+    # @param send_settings [Hash<Integer, Integer>]
     #
     # @return [Settings, nil]
-    def self.handle_settings(settings); end
+    def self.handle_settings(settings, send_settings)
+      return nil if settings.ack?
+
+      send_settings.merge!(settings.setting.to_h)
+      Frame::Settings.new(true, [])
+    end
 
     # @param data [Data]
     # @param send_window [Window]
