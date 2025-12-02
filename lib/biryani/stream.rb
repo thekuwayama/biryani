@@ -31,6 +31,8 @@ module Biryani
               tx << Frame::Data.new(true, frame.stream_id, 'Hello, world!', nil)
               break
             end
+          when FrameType::PRIORITY
+            # https://datatracker.ietf.org/doc/html/rfc9113#section-5.3.2
 
             # TODO: other FrameType
           end
