@@ -76,7 +76,8 @@ module Biryani
 
           []
         when FrameType::GOAWAY
-          # TODO
+          self.class.handle_goaway(frame)
+          # TODO: logging error
           []
         when FrameType::WINDOW_UPDATE
           self.class.handle_window_update(frame, @send_window, @stream_ctxs)
@@ -170,6 +171,9 @@ module Biryani
       send_settings.merge!(settings.setting.to_h)
       Frame::Settings.new(true, [])
     end
+
+    # @param _goaway [Goaway]
+    def self.handle_goaway(_goaway); end
 
     # @param data [Data]
     # @param send_window [Window]
