@@ -4,6 +4,10 @@ module Biryani
 
     Bucket = Struct.new(:fields, :data)
 
+    # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/BlockLength
+    # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/MethodLength
     def initialize
       @state = State.new
       @rx = Ractor.new do
@@ -33,13 +37,28 @@ module Biryani
               tx << Frame::Data.new(true, frame.stream_id, 'Hello, world!', nil)
               break
             end
+          when FrameType::RST_STREAM
+            # TODO
+          when FrameType::PUSH_PROMISE
+            # TODO
+          when FrameType::WINDOW_UPDATE
+            # TODO
+          when FrameType::CONTINUATION
+            # TODO
           when FrameType::PRIORITY
-            # https://datatracker.ietf.org/doc/html/rfc9113#section-5.3.2
-
-            # TODO: other FrameType
+            self.class.handle_priority(frame)
           end
         end
       end
+    end
+    # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/BlockLength
+    # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/MethodLength
+
+    # @param _priority [Priority]
+    def self.handle_priority(_priority)
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-5.3.2
     end
 
     # @param frame [Object]
