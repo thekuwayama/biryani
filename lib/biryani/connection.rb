@@ -30,14 +30,12 @@ module Biryani
     # @param io [IO]
     def serve(io)
       self.class.read_http2_magic(io)
-
-      io.write(Frame::Settings.new(false, []).to_binary_s)
-      io.flush
+      self.class.do_send(io, Frame::Settings.new(false, []), true)
 
       loop do
         recv_frame = Frame.read(io)
         dispatch(recv_frame).each do |frame|
-          io.write(frame.to_binary_s)
+          self.class.do_send(io, frame, false)
         end
 
         txs = @stream_ctxs.values.map(&:tx)
@@ -117,24 +115,43 @@ module Biryani
 
     # @param io [IO]
     # @param frame [Object]
+    # @param flush [Boolean]
+    def self.do_send(io, frame, flush)
+      io.write(frame.to_binary_s)
+      io.flush if flush
+    end
+
+    # @param io [IO]
+    # @param frame [Object]
     # @param send_window [Window]
     # @param stream_ctxs [Hash<Integer, StreamContext>]
     # @param data_buffer [DataBuffer]
     def self.send(io, frame, send_window, stream_ctxs, data_buffer)
       if frame.f_type != FrameType::DATA
-        io.write(frame.to_binary_s)
+        do_send(io, frame, false)
         return
       end
 
       data = frame
       if sendable?(data, send_window, stream_ctxs)
-        io.write(data.to_binary_s)
+        do_send(io, data, false)
         send_window.consume!(data.length)
         stream_ctxs[data.stream_id].send_window.consume!(data.length)
         return
       end
 
       data_buffer << data
+    end
+
+    # @param data [Data]
+    # @param send_window [Window]
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    #
+    # @return [Boolean]
+    def self.sendable?(data, send_window, stream_ctxs)
+      length = data.length
+      stream_id = data.stream_id
+      send_window.available?(length) && stream_ctxs[stream_id].send_window.available?(length)
     end
 
     # @param io [IO]
@@ -174,17 +191,6 @@ module Biryani
 
     # @param _goaway [Goaway]
     def self.handle_goaway(_goaway); end
-
-    # @param data [Data]
-    # @param send_window [Window]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
-    #
-    # @return [Boolean]
-    def self.sendable?(data, send_window, stream_ctxs)
-      length = data.length
-      stream_id = data.stream_id
-      send_window.available?(length) && stream_ctxs[stream_id].send_window.available?(length)
-    end
 
     # @return [Hash<Integer, Integer>]
     def self.default_settings
