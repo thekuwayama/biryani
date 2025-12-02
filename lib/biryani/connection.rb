@@ -1,4 +1,13 @@
 module Biryani
+  module SettingsID
+    SETTINGS_HEADER_TABLE_SIZE      = 0x0001
+    SETTINGS_ENABLE_PUSH            = 0x0002
+    SETTINGS_MAX_CONCURRENT_STREAMS = 0x0003
+    SETTINGS_INITIAL_WINDOW_SIZE    = 0x0004
+    SETTINGS_MAX_FRAME_SIZE         = 0x0005
+    SETTINGS_MAX_HEADER_LIST_SIZE   = 0x0006
+  end
+
   class Connection
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
@@ -14,6 +23,8 @@ module Biryani
       @send_window = Window.new
       @recv_window = Window.new
       @data_buffer = DataBuffer.new
+      @send_settings = self.class.default_settings # Hash<Integer, Integer>
+      @recv_settings = self.class.default_settings # Hash<Integer, Integer>
     end
 
     # @param io [IO]
@@ -43,6 +54,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
@@ -54,7 +66,9 @@ module Biryani
         when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
           abort 'protocol_error' # TODO: send error
         when FrameType::SETTINGS
-          # TODO
+          settings_ack = self.class.handle_settings(frame, @send_settings)
+          return [settings_ack] unless settings_ack.nil?
+
           []
         when FrameType::PING
           ping_ack = self.class.handle_ping(frame)
@@ -90,6 +104,7 @@ module Biryani
         []
       end
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
@@ -140,9 +155,20 @@ module Biryani
 
     # @param ping [Ping]
     #
-    # @param [Ping, nil]
+    # @return [Ping, nil]
     def self.handle_ping(ping)
       Frame::Ping.new(true, ping.opaque) unless ping.ack?
+    end
+
+    # @param settings [Settings]
+    # @param send_settings [Hash<Integer, Integer>]
+    #
+    # @return [Settings, nil]
+    def self.handle_settings(settings, send_settings)
+      return nil if settings.ack?
+
+      send_settings.merge!(settings.setting.to_h)
+      Frame::Settings.new(true, [])
     end
 
     # @param data [Data]
@@ -154,6 +180,19 @@ module Biryani
       length = data.length
       stream_id = data.stream_id
       send_window.available?(length) && stream_ctxs[stream_id].send_window.available?(length)
+    end
+
+    # @return [Hash<Integer, Integer>]
+    def self.default_settings
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-6.5.2
+      {
+        SettingsID::SETTINGS_HEADER_TABLE_SIZE => 4096,
+        SettingsID::SETTINGS_ENABLE_PUSH => 1,
+        SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS => 0xffffffff,
+        SettingsID::SETTINGS_INITIAL_WINDOW_SIZE => 65_535,
+        SettingsID::SETTINGS_MAX_FRAME_SIZE => 16_384,
+        SettingsID::SETTINGS_MAX_HEADER_LIST_SIZE => 0xffffffff
+      }
     end
   end
 end
