@@ -11,17 +11,8 @@ module Biryani
   class Connection
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
-    # https://datatracker.ietf.org/doc/html/rfc9113#section-6.5.2
-    DEFAULT_SETTINGS = {
-      SettingsID::SETTINGS_HEADER_TABLE_SIZE => 4096,
-      SettingsID::SETTINGS_ENABLE_PUSH => 1,
-      SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS => 0xffffffff,
-      SettingsID::SETTINGS_INITIAL_WINDOW_SIZE => 65_535,
-      SettingsID::SETTINGS_MAX_FRAME_SIZE => 16_384,
-      SettingsID::SETTINGS_MAX_HEADER_LIST_SIZE => 0xffffffff
-    }.freeze
 
-    private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH, :DEFAULT_SETTINGS
+    private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
@@ -32,8 +23,8 @@ module Biryani
       @send_window = Window.new
       @recv_window = Window.new
       @data_buffer = DataBuffer.new
-      @send_settings = DEFAULT_SETTINGS.dup # Hash<Integer, Integer>
-      @recv_settings = DEFAULT_SETTINGS.dup # Hash<Integer, Integer>
+      @send_settings = self.class.default_settings # Hash<Integer, Integer>
+      @recv_settings = self.class.default_settings # Hash<Integer, Integer>
     end
 
     # @param io [IO]
@@ -189,6 +180,19 @@ module Biryani
       length = data.length
       stream_id = data.stream_id
       send_window.available?(length) && stream_ctxs[stream_id].send_window.available?(length)
+    end
+
+    # @return [Hash<Integer, Integer>]
+    def self.default_settings
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-6.5.2
+      {
+        SettingsID::SETTINGS_HEADER_TABLE_SIZE => 4096,
+        SettingsID::SETTINGS_ENABLE_PUSH => 1,
+        SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS => 0xffffffff,
+        SettingsID::SETTINGS_INITIAL_WINDOW_SIZE => 65_535,
+        SettingsID::SETTINGS_MAX_FRAME_SIZE => 16_384,
+        SettingsID::SETTINGS_MAX_HEADER_LIST_SIZE => 0xffffffff
+      }
     end
   end
 end
