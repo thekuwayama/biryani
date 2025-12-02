@@ -18,8 +18,8 @@ module Biryani
 
     def initialize
       @stream_ctxs = {} # Hash<Integer, StreamContext>
-      @encoder = HPACK::Encoder.new(4096)
-      @decoder = HPACK::Decoder.new(4096)
+      @encoder = HPACK::Encoder.new(4_096)
+      @decoder = HPACK::Decoder.new(4_096)
       @send_window = Window.new
       @recv_window = Window.new
       @data_buffer = DataBuffer.new
@@ -190,7 +190,7 @@ module Biryani
     def self.default_settings
       # https://datatracker.ietf.org/doc/html/rfc9113#section-6.5.2
       {
-        SettingsID::SETTINGS_HEADER_TABLE_SIZE => 4096,
+        SettingsID::SETTINGS_HEADER_TABLE_SIZE => 4_096,
         SettingsID::SETTINGS_ENABLE_PUSH => 1,
         SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS => 0xffffffff,
         SettingsID::SETTINGS_INITIAL_WINDOW_SIZE => 65_535,
