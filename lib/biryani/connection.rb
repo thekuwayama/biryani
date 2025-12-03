@@ -90,8 +90,7 @@ module Biryani
 
         ctx = @stream_ctxs[stream_id] || StreamContext.new
         stream = ctx.stream
-        tx = ctx.tx
-        stream.rx << [frame, tx]
+        stream.rx << frame
         stream.transition_state!(frame, :recv)
 
         if stream.closed?

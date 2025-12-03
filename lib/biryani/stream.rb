@@ -4,17 +4,18 @@ module Biryani
 
     Bucket = Struct.new(:fields, :data)
 
+    # @param tx [Ractor] port
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/BlockLength
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
-    def initialize
+    def initialize(tx)
       @state = State.new
-      @rx = Ractor.new do
+      @rx = Ractor.new(tx) do |tx|
         bucket = Bucket.new(fields: [], data: '')
 
         loop do
-          frame, tx = Ractor.receive
+          frame = Ractor.receive
 
           case frame.f_type
           when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY

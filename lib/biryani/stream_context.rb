@@ -3,8 +3,8 @@ module Biryani
     attr_accessor :stream, :tx, :send_window, :recv_window
 
     def initialize
-      @stream = Stream.new
       @tx = channel
+      @stream = Stream.new(@tx)
       @send_window = Window.new
       @recv_window = Window.new
     end
