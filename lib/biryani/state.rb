@@ -10,6 +10,11 @@ module Biryani
       @state = self.class.next(@state, frame, direction)
     end
 
+    # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
+    def to_sym
+      @state
+    end
+
     #                          +--------+
     #                  send PP |        | recv PP
     #                 ,--------+  idle  +--------.
@@ -93,17 +98,17 @@ module Biryani
         :half_closed_local
       in [:half_closed_local, FrameType::RST_STREAM, :send]
         :closed
-      in [:half_closed_local, FrameType::DATA, :recv] if f.end_stream?
+      in [:half_closed_local, FrameType::DATA, :recv] if frame.end_stream?
         :closed
-      in [:half_closed_local, FrameType::HEADERS, :recv] if f.end_stream?
+      in [:half_closed_local, FrameType::HEADERS, :recv] if frame.end_stream?
         :closed
       in [:half_closed_local, FrameType::RST_STREAM, :recv]
         :closed
       in [:half_closed_local, _, :recv]
         :half_closed_local
-      in [:half_closed_remote, FrameType::DATA, :send] if f.end_stream?
+      in [:half_closed_remote, FrameType::DATA, :send] if frame.end_stream?
         :closed
-      in [:half_closed_remote, FrameType::HEADERS, :send] if f.end_stream?
+      in [:half_closed_remote, FrameType::HEADERS, :send] if frame.end_stream?
         :closed
       in [:half_closed_remote, FrameType::RST_STREAM, :send]
         :closed

@@ -40,19 +40,19 @@ module Biryani
 
         txs = @stream_ctxs.values.map(&:tx)
         until txs.empty?
-          _, send_frame = Ractor.select(*txs)
+          _, ss = Ractor.select(*txs)
+          send_frame, _state = ss
+          # TODO: ractor close if state == :closed
+          # TODO: @stream_ctxs.delete(stream_id)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
         end
-
-        # TODO: close connection
       end
     end
 
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
-    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
@@ -91,18 +91,11 @@ module Biryani
         ctx = @stream_ctxs[stream_id] || StreamContext.new
         stream = ctx.stream
         stream.rx << frame
-        stream.transition_state!(frame, :recv)
-
-        if stream.closed?
-          @stream_ctxs.delete(stream_id)
-        else
-          @stream_ctxs[stream_id] = ctx
-        end
+        @stream_ctxs[stream_id] = ctx
 
         []
       end
     end
-    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
