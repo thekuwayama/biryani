@@ -41,9 +41,8 @@ module Biryani
         txs = @stream_ctxs.values.map(&:tx)
         until txs.empty?
           _, ss = Ractor.select(*txs)
-          send_frame, _state = ss
-          # TODO: ractor close if state == :closed
-          # TODO: @stream_ctxs.delete(stream_id)
+          send_frame, state = ss
+          close_stream(send_frame.stream_id) if state == :closed
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
         end
@@ -100,9 +99,12 @@ module Biryani
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
 
-    # @return [Boolean]
-    def closed?
-      false
+    # @param id [Integer] stream_id
+    def close_stream(id)
+      @data_buffer.filter! { |data| data.stream_id == id }
+      @stream_ctxs[id].stream.rx.close
+      @stream_ctxs[id].tx.close
+      @stream_ctxs.delete(id)
     end
 
     # @param io [IO]
