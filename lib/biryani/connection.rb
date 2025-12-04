@@ -30,7 +30,6 @@ module Biryani
     # @param io [IO]
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
-    # rubocop: disable Metrics/PerceivedComplexity
     def serve(io)
       self.class.read_http2_magic(io)
       self.class.do_send(io, Frame::Settings.new(false, []), true)
@@ -51,14 +50,14 @@ module Biryani
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
           @stream_ctxs[stream_id].close if state == :closed
-          closed_ids = @stream_ctxs.filter { |id, ctx| id == stream_id && ctx.closed? }.keys
-          closed_ids.filter { |id| @data_buffer.filter { |data| data.stream_id == id }.empty? }.each { |id| close_stream(id) }
+          closed_ids = @stream_ctxs.filter { |_, ctx| ctx.closed? }.keys
+          closed_ids.filter! { |id| @data_buffer.has?(id) }
+          closed_ids.each { |id| close_stream(id) }
         end
       end
     end
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
-    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param frame [Object]
     #

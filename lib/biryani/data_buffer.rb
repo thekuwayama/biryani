@@ -31,5 +31,12 @@ module Biryani
     def length
       @buffer.length
     end
+
+    # @param stream_id [Integer]
+    #
+    # @return [Boolean]
+    def has?(stream_id)
+      @buffer.filter { |data| data.stream_id == stream_id }.empty?
+    end
   end
 end
