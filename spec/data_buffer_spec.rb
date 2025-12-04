@@ -101,4 +101,16 @@ RSpec.describe DataBuffer do
       expect(stream_ctxs5.values.map(&:send_window).map(&:length)).to eq [2**16 - 1, 2**16 - 1]
     end
   end
+
+  context 'has?' do
+    let(:data_buffer6) do
+      data_buffer = DataBuffer.new
+      data_buffer << Frame::Data.new(false, 1, 'one', nil)
+      data_buffer
+    end
+    it 'should take' do
+      expect(data_buffer6.has?(1)).to eq true
+      expect(data_buffer6.has?(2)).to eq false
+    end
+  end
 end

@@ -36,7 +36,7 @@ module Biryani
     #
     # @return [Boolean]
     def has?(stream_id)
-      @buffer.filter { |data| data.stream_id == stream_id }.empty?
+      @buffer.filter { |data| data.stream_id == stream_id }.any?
     end
   end
 end

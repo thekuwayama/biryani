@@ -105,7 +105,7 @@ module Biryani
 
     def close_streams
       closed_ids = @stream_ctxs.filter { |_, ctx| ctx.closed? }.keys
-      closed_ids.filter! { |id| @data_buffer.has?(id) }
+      closed_ids.filter! { |id| !@data_buffer.has?(id) }
       closed_ids.each { |id| close_stream(id) }
     end
 
