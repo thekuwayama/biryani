@@ -17,5 +17,14 @@ module Biryani
         end
       end
     end
+
+    def close
+      @closed = true
+    end
+
+    # @return [Boolean]
+    def closed?
+      @closed
+    end
   end
 end
