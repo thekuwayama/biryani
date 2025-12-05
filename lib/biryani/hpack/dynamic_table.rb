@@ -42,6 +42,16 @@ module Biryani
       def [](index)
         @table[index]
       end
+
+      # @param new_limit [Integer]
+      def limit!(new_limit)
+        while @size > new_limit
+          n, v = @table.pop
+          @size -= n.bytesize + v.bytesize + 32
+        end
+
+        @limit = new_limit
+      end
     end
   end
 end

@@ -12,6 +12,11 @@ module Biryani
       def encode(fields)
         Fields.encode(fields, @dynamic_table)
       end
+
+      # @param new_limit [Integer]
+      def limit!(new_limit)
+        @dynamic_table.limit!(new_limit)
+      end
     end
   end
 end

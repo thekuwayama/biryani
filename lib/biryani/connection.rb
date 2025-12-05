@@ -69,7 +69,7 @@ module Biryani
         when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
           abort 'protocol_error' # TODO: send error
         when FrameType::SETTINGS
-          settings_ack = self.class.handle_settings(frame, @send_settings)
+          settings_ack = self.class.handle_settings(frame, @send_settings, @encoder, @decoder)
           return [settings_ack] unless settings_ack.nil?
 
           []
@@ -188,12 +188,15 @@ module Biryani
 
     # @param settings [Settings]
     # @param send_settings [Hash<Integer, Integer>]
+    # @param encoder [Encoder]
+    # @param decoder [Decoder]
     #
     # @return [Settings, nil]
-    def self.handle_settings(settings, send_settings)
+    def self.handle_settings(settings, send_settings, _encoder, decoder)
       return nil if settings.ack?
 
       send_settings.merge!(settings.setting.to_h)
+      decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
       Frame::Settings.new(true, [])
     end
 
