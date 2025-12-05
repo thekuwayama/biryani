@@ -48,7 +48,7 @@ module Biryani
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
           @stream_ctxs[stream_id].close if state == :closed
-          close_streams
+          self.class.close_streams(@stream_ctxs, @data_buffer)
         end
       end
     end
@@ -103,17 +103,20 @@ module Biryani
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
 
-    def close_streams
-      closed_ids = @stream_ctxs.filter { |_, ctx| ctx.closed? }.keys
-      closed_ids.filter! { |id| !@data_buffer.has?(id) }
-      closed_ids.each { |id| close_stream(id) }
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param data_buffer [DataBuffer]
+    def self.close_streams(stream_ctxs, data_buffer)
+      closed_ids = stream_ctxs.filter { |_, ctx| ctx.closed? }.keys
+      closed_ids.filter! { |id| !data_buffer.has?(id) }
+      closed_ids.each { |id| close_stream(id, stream_ctxs) }
     end
 
     # @param id [Integer] stream_id
-    def close_stream(id)
-      @stream_ctxs[id].stream.rx.close
-      @stream_ctxs[id].tx.close
-      @stream_ctxs.delete(id)
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    def self.close_stream(id, stream_ctxs)
+      stream_ctxs[id].stream.rx.close_incoming
+      stream_ctxs[id].tx.close_incoming
+      stream_ctxs.delete(id)
     end
 
     # @param io [IO]
