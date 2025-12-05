@@ -125,17 +125,12 @@ module Biryani
       in [:closed, _, :recv]
         # TODO: stream_closed error
       else
-        # TODO: protocol_error error
+        state
       end
     end
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
-
-    # @return [Boolean]
-    def closed?
-      @state == :closed
-    end
   end
 end

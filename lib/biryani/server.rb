@@ -4,15 +4,13 @@ module Biryani
 
     # @param socket [Socket]
     def run(socket)
-      connections = []
       loop do
-        connections << Ractor.new(socket.accept) do |io|
+        Ractor.new(socket.accept) do |io|
           conn = Connection.new
           conn.serve(io)
           io&.close
         end
       end
-      # TODO: close ractor
     end
   end
 end

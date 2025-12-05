@@ -38,18 +38,21 @@ module Biryani
           self.class.do_send(io, frame, false)
         end
 
-        txs = @stream_ctxs.values.map(&:tx)
-        until txs.empty?
+        loop do
+          txs = @stream_ctxs.values.map(&:tx)
+          break if txs.empty?
+
           _, ss = Ractor.select(*txs)
           send_frame, state = ss
           stream_id = send_frame.stream_id
-
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
           @stream_ctxs[stream_id].close if state == :closed
           self.class.close_streams(@stream_ctxs, @data_buffer)
         end
+
+        break if io.eof?
       end
     end
 
