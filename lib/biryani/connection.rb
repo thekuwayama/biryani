@@ -44,11 +44,10 @@ module Biryani
 
           _, ss = Ractor.select(*txs)
           send_frame, state = ss
-          stream_id = send_frame.stream_id
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
-          @stream_ctxs[stream_id].close if state == :closed
+          @stream_ctxs[send_frame.stream_id].close if state == :closed
           self.class.close_streams(@stream_ctxs, @data_buffer)
         end
 
