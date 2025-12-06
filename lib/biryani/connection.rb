@@ -17,6 +17,7 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
     def initialize
+      @max_streams = 0xffffffff
       @stream_ctxs = {} # Hash<Integer, StreamContext>
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
@@ -42,8 +43,8 @@ module Biryani
           txs = @stream_ctxs.values.map(&:tx)
           break if txs.empty?
 
-          _, ss = Ractor.select(*txs)
-          send_frame, state = ss
+          _, pair = Ractor.select(*txs)
+          send_frame, state = pair
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
           self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
@@ -58,6 +59,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
@@ -67,12 +69,13 @@ module Biryani
       if stream_id.zero?
         case typ
         when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-          abort 'protocol_error' # TODO: send error
+          raise 'protocol_error' # TODO: send error
         when FrameType::SETTINGS
-          settings_ack = self.class.handle_settings(frame, @send_settings, @encoder, @decoder)
-          return [settings_ack] unless settings_ack.nil?
+          pair = self.class.handle_settings(frame, @send_settings, @decoder)
+          return [] if pair.nil?
 
-          []
+          settings_ack, @max_streams = pair
+          [settings_ack]
         when FrameType::PING
           ping_ack = self.class.handle_ping(frame)
           return [ping_ack] unless ping_ack.nil?
@@ -88,12 +91,19 @@ module Biryani
         end
       else
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
-          abort 'protocol_error' # TODO: send error
+          raise 'protocol_error' # TODO: send error
         elsif typ == FrameType::HEADERS
           frame = frame.decode(@decoder)
         end
 
-        ctx = @stream_ctxs[stream_id] || StreamContext.new
+        ctx = @stream_ctxs[stream_id]
+        if ctx.nil?
+          if @stream_ctxs.length + 1 > @max_streams
+            raise 'protocol_error' # TODO: send error
+          end
+
+          ctx = StreamContext.new
+        end
         stream = ctx.stream
         stream.rx << frame
         @stream_ctxs[stream_id] = ctx
@@ -101,6 +111,7 @@ module Biryani
         []
       end
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
@@ -188,16 +199,16 @@ module Biryani
 
     # @param settings [Settings]
     # @param send_settings [Hash<Integer, Integer>]
-    # @param encoder [Encoder]
     # @param decoder [Decoder]
     #
     # @return [Settings, nil]
-    def self.handle_settings(settings, send_settings, _encoder, decoder)
+    # @return [Integer]
+    def self.handle_settings(settings, send_settings, decoder)
       return nil if settings.ack?
 
       send_settings.merge!(settings.setting.to_h)
       decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
-      Frame::Settings.new(true, [])
+      [Frame::Settings.new(true, []), send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]]
     end
 
     # @param _goaway [Goaway]

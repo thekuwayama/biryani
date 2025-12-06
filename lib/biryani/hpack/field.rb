@@ -127,7 +127,7 @@ module Biryani
         elsif (byte & 0b11110000).zero?
           decode_literal_value_without_indexing(s, cursor)
         else
-          abort 'unreachable'
+          raise 'unreachable' # TODO: internal error
         end
       end
       # rubocop: enable Metrics/CyclomaticComplexity

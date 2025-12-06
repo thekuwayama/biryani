@@ -20,7 +20,7 @@ module Biryani
 
           case recv_frame.f_type
           when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-            abort 'protocol_error' # TODO: send error
+            raise 'protocol_error' # TODO: send error
           when FrameType::DATA
             bucket.data += recv_frame.data
 
