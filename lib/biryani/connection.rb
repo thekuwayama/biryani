@@ -82,6 +82,9 @@ module Biryani
           raise 'protocol_error' # TODO: send error
         elsif typ == FrameType::HEADERS
           frame = frame.decode(@decoder)
+        elsif typ == FrameType::WINDOW_UPDATE
+          self.class.handle_window_update(frame, @send_window, @stream_ctxs)
+          return @data_buffer.take!(@send_window, @stream_ctxs)
         end
 
         ctx = @stream_ctxs[stream_id]

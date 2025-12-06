@@ -52,7 +52,7 @@ module Biryani
           when FrameType::PUSH_PROMISE
             # TODO
           when FrameType::WINDOW_UPDATE
-            # TODO
+            raise 'unreachable' # TODO: internal error
           when FrameType::CONTINUATION
             # TODO
           when FrameType::PRIORITY
