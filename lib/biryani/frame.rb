@@ -118,8 +118,8 @@ module Biryani
       typ = s[3].unpack1('C')
 
       FRAME_MAP[typ].read(s + io.read(len + 5))
-      # TODO: unknown frame type
-      # TODO: read error
+      # TODO: Frame.read checks for syntax errors & unknown frame type
+      # TODO: Connection.handle_* & Stream.handle_* methods check for semantic errors
     end
   end
 end
