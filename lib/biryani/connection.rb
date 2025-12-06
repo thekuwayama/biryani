@@ -82,6 +82,9 @@ module Biryani
           raise 'protocol_error' # TODO: send error
         elsif typ == FrameType::HEADERS
           frame = frame.decode(@decoder)
+        elsif typ == FrameType::RST_STREAM
+          self.class.handle_rst_stream(frame, @stream_ctxs)
+          return []
         elsif typ == FrameType::WINDOW_UPDATE
           self.class.handle_window_update(frame, @send_window, @stream_ctxs)
           return @data_buffer.take!(@send_window, @stream_ctxs)
@@ -186,22 +189,11 @@ module Biryani
       raise 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
     end
 
-    # @param window_update [WindowUpdate]
-    # @param send_window [Window]
+    # @param rst_stream [RstStream]
     # @param stream_ctxs [Hash<Integer, StreamContext>]
-    def self.handle_window_update(window_update, send_window, stream_ctxs)
-      if window_update.stream_id.zero?
-        send_window.increase!(window_update.window_size_increment)
-      else
-        stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
-      end
-    end
-
-    # @param ping [Ping]
-    #
-    # @return [Ping, nil]
-    def self.handle_ping(ping)
-      Frame::Ping.new(true, ping.opaque) unless ping.ack?
+    def self.handle_rst_stream(rst_stream, stream_ctxs)
+      stream_id = rst_stream.stream_id
+      stream_ctxs[stream_id].state = :closed
     end
 
     # @param settings [Settings]
@@ -218,8 +210,26 @@ module Biryani
       [Frame::Settings.new(true, []), send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]]
     end
 
+    # @param ping [Ping]
+    #
+    # @return [Ping, nil]
+    def self.handle_ping(ping)
+      Frame::Ping.new(true, ping.opaque) unless ping.ack?
+    end
+
     # @param _goaway [Goaway]
     def self.handle_goaway(_goaway); end
+
+    # @param window_update [WindowUpdate]
+    # @param send_window [Window]
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    def self.handle_window_update(window_update, send_window, stream_ctxs)
+      if window_update.stream_id.zero?
+        send_window.increase!(window_update.window_size_increment)
+      else
+        stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
+      end
+    end
 
     # @return [Hash<Integer, Integer>]
     def self.default_settings

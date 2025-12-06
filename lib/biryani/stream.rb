@@ -48,7 +48,7 @@ module Biryani
               break
             end
           when FrameType::RST_STREAM
-            # TODO
+            raise 'unreachable' # TODO: internal error
           when FrameType::PUSH_PROMISE
             # TODO
           when FrameType::WINDOW_UPDATE
