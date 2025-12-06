@@ -47,67 +47,80 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
-    # rubocop: disable Metrics/AbcSize
-    # rubocop: disable Metrics/CyclomaticComplexity
-    # rubocop: disable Metrics/MethodLength
-    # rubocop: disable Metrics/PerceivedComplexity
     def dispatch(frame)
-      stream_id = frame.stream_id
-      typ = frame.f_type
-      if stream_id.zero?
-        case typ
-        when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-          raise 'protocol_error' # TODO: send error
-        when FrameType::SETTINGS
-          pair = self.class.handle_settings(frame, @send_settings, @decoder)
-          return [] if pair.nil?
-
-          settings_ack, @max_streams = pair
-          [settings_ack]
-        when FrameType::PING
-          ping_ack = self.class.handle_ping(frame)
-          return [ping_ack] unless ping_ack.nil?
-
-          []
-        when FrameType::GOAWAY
-          self.class.handle_goaway(frame)
-          # TODO: logging error
-          []
-        when FrameType::WINDOW_UPDATE
-          self.class.handle_window_update(frame, @send_window, @stream_ctxs)
-          @data_buffer.take!(@send_window, @stream_ctxs)
-        end
+      if frame.stream_id.zero?
+        handle_connection_frame(frame)
       else
-        case typ
-        when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-          raise 'protocol_error' # TODO: send error
-        when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
-          frame = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
-          ctx = @stream_ctxs[stream_id]
-          raise 'protocol_error' if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
-
-          if ctx.nil?
-            ctx = StreamContext.new
-            @stream_ctxs[stream_id] = ctx
-          end
-
-          stream = ctx.stream
-          stream.rx << frame
-          []
-        when FrameType::PUSH_PROMISE
-          # TODO
-        when FrameType::RST_STREAM
-          self.class.handle_rst_stream(frame, @stream_ctxs)
-          []
-        when FrameType::WINDOW_UPDATE
-          self.class.handle_window_update(frame, @send_window, @stream_ctxs)
-          @data_buffer.take!(@send_window, @stream_ctxs)
-        end
+        handle_stream_frame(frame)
       end
     end
-    # rubocop: enable Metrics/AbcSize
+
+    # @param frame [Object]
+    #
+    # @return [Array<Object>] frames
+    # rubocop: disable Metrics/CyclomaticComplexity
+    def handle_connection_frame(frame)
+      typ = frame.f_type
+      case typ
+      when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
+        raise 'protocol_error' # TODO: send error
+      when FrameType::SETTINGS
+        pair = self.class.handle_settings(frame, @send_settings, @decoder)
+        return [] if pair.nil?
+
+        settings_ack, @max_streams = pair
+        [settings_ack]
+      when FrameType::PING
+        ping_ack = self.class.handle_ping(frame)
+        return [ping_ack] unless ping_ack.nil?
+
+        []
+      when FrameType::GOAWAY
+        self.class.handle_goaway(frame)
+        # TODO: logging error
+        []
+      when FrameType::WINDOW_UPDATE
+        self.class.handle_window_update(frame, @send_window, @stream_ctxs)
+        @data_buffer.take!(@send_window, @stream_ctxs)
+      end
+    end
     # rubocop: enable Metrics/CyclomaticComplexity
-    # rubocop: enable Metrics/MethodLength
+
+    # @param frame [Object]
+    #
+    # @return [Array<Object>] frames
+    # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/PerceivedComplexity
+    def handle_stream_frame(frame)
+      stream_id = frame.stream_id
+      typ = frame.f_type
+      case typ
+      when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
+        raise 'protocol_error' # TODO: send error
+      when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
+        frame = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
+        ctx = @stream_ctxs[stream_id]
+        raise 'protocol_error' if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
+
+        if ctx.nil?
+          ctx = StreamContext.new
+          @stream_ctxs[stream_id] = ctx
+        end
+
+        stream = ctx.stream
+        stream.rx << frame
+        []
+      when FrameType::PUSH_PROMISE
+        # TODO
+      when FrameType::RST_STREAM
+        self.class.handle_rst_stream(frame, @stream_ctxs)
+        []
+      when FrameType::WINDOW_UPDATE
+        self.class.handle_window_update(frame, @send_window, @stream_ctxs)
+        @data_buffer.take!(@send_window, @stream_ctxs)
+      end
+    end
+    # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @param io [IO]
