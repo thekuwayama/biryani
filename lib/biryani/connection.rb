@@ -94,10 +94,10 @@ module Biryani
           end
 
           ctx = StreamContext.new
+          @stream_ctxs[stream_id] = ctx
         end
         stream = ctx.stream
         stream.rx << frame
-        @stream_ctxs[stream_id] = ctx
 
         []
       end
