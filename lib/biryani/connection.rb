@@ -81,8 +81,8 @@ module Biryani
         case typ
         when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
           raise 'protocol_error' # TODO: send error
-        when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY
-          frame = frame.decode(@decoder) if typ == FrameType::HEADERS
+        when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
+          frame = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
           ctx = @stream_ctxs[stream_id]
           raise 'protocol_error' if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
 
@@ -102,8 +102,6 @@ module Biryani
         when FrameType::WINDOW_UPDATE
           self.class.handle_window_update(frame, @send_window, @stream_ctxs)
           @data_buffer.take!(@send_window, @stream_ctxs)
-        when FrameType::CONTINUATION
-          # TODO
         end
       end
     end
@@ -120,7 +118,7 @@ module Biryani
 
         _, pair = Ractor.select(*txs)
         send_frame, state = pair
-        send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
+        send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
         self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
         @stream_ctxs[send_frame.stream_id].state = state

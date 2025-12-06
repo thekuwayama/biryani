@@ -35,6 +35,7 @@ module Biryani
               break
             end
           when FrameType::HEADERS
+            # TODO: check recv_frame.end_headers?
             bucket.fields += recv_frame.fields
 
             if recv_frame.end_stream?
@@ -47,6 +48,8 @@ module Biryani
               tx << [send_frame, state.to_sym]
               break
             end
+          when FrameType::PRIORITY
+            self.class.handle_priority(recv_frame)
           when FrameType::RST_STREAM
             raise 'unreachable' # TODO: internal error
           when FrameType::PUSH_PROMISE
@@ -54,9 +57,8 @@ module Biryani
           when FrameType::WINDOW_UPDATE
             raise 'unreachable' # TODO: internal error
           when FrameType::CONTINUATION
-            # TODO
-          when FrameType::PRIORITY
-            self.class.handle_priority(recv_frame)
+            # TODO: check recv_frame.end_headers?
+            bucket.fields += recv_frame.fields
           end
         end
       end

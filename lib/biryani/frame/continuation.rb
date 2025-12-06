@@ -36,6 +36,15 @@ module Biryani
 
         Continuation.new(end_headers, stream_id, fragment)
       end
+
+      # @param decoder [Decoder]
+      #
+      # @return [RawContinuation]
+      def decode(decoder)
+        fields = decoder.decode(@fragment)
+
+        RawContinuation.new(@end_headers, @stream_id, fields)
+      end
     end
   end
 end
