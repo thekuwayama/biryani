@@ -81,7 +81,7 @@ module Biryani
         case typ
         when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
           raise 'protocol_error' # TODO: send error
-        when FrameType::DATA, FrameType::HEADERS
+        when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY
           frame = frame.decode(@decoder) if typ == FrameType::HEADERS
           ctx = @stream_ctxs[stream_id]
           raise 'protocol_error' if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
@@ -94,8 +94,6 @@ module Biryani
           stream = ctx.stream
           stream.rx << frame
           []
-        when FrameType::PRIORITY
-          # TODO
         when FrameType::PUSH_PROMISE
           # TODO
         when FrameType::RST_STREAM
