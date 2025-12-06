@@ -18,13 +18,17 @@ module Biryani
       end
     end
 
-    def close
-      @closed = true
-    end
+    # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
+    attr_writer :state
 
     # @return [Boolean]
     def closed?
-      @closed
+      @state == :closed
+    end
+
+    # @return [Boolean]
+    def active?
+      @state == :open || @state == :half_closed_local || @state == :half_closed_remote
     end
   end
 end

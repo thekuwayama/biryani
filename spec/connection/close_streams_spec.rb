@@ -15,7 +15,7 @@ RSpec.describe Connection do
 
     let(:stream_ctxs2) do
       stream_ctxs = { 1 => StreamContext.new, 2 => StreamContext.new }
-      stream_ctxs[2].close
+      stream_ctxs[2].state = :closed
       stream_ctxs
     end
     let(:data_buffer2) do
@@ -28,7 +28,7 @@ RSpec.describe Connection do
 
     let(:stream_ctxs3) do
       stream_ctxs = { 1 => StreamContext.new, 2 => StreamContext.new }
-      stream_ctxs[2].close
+      stream_ctxs[2].state = :closed
       stream_ctxs
     end
     let(:data_buffer3) do
