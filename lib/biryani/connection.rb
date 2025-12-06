@@ -78,31 +78,35 @@ module Biryani
           @data_buffer.take!(@send_window, @stream_ctxs)
         end
       else
-        if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
+        case typ
+        when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
           raise 'protocol_error' # TODO: send error
-        elsif typ == FrameType::HEADERS
-          frame = frame.decode(@decoder)
-        elsif typ == FrameType::RST_STREAM
-          self.class.handle_rst_stream(frame, @stream_ctxs)
-          return []
-        elsif typ == FrameType::WINDOW_UPDATE
-          self.class.handle_window_update(frame, @send_window, @stream_ctxs)
-          return @data_buffer.take!(@send_window, @stream_ctxs)
-        end
+        when FrameType::DATA, FrameType::HEADERS
+          frame = frame.decode(@decoder) if typ == FrameType::HEADERS
+          ctx = @stream_ctxs[stream_id]
+          raise 'protocol_error' if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
 
-        ctx = @stream_ctxs[stream_id]
-        if ctx.nil?
-          if @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
-            raise 'protocol_error' # TODO: send error
+          if ctx.nil?
+            ctx = StreamContext.new
+            @stream_ctxs[stream_id] = ctx
           end
 
-          ctx = StreamContext.new
-          @stream_ctxs[stream_id] = ctx
+          stream = ctx.stream
+          stream.rx << frame
+          []
+        when FrameType::PRIORITY
+          # TODO
+        when FrameType::PUSH_PROMISE
+          # TODO
+        when FrameType::RST_STREAM
+          self.class.handle_rst_stream(frame, @stream_ctxs)
+          []
+        when FrameType::WINDOW_UPDATE
+          self.class.handle_window_update(frame, @send_window, @stream_ctxs)
+          @data_buffer.take!(@send_window, @stream_ctxs)
+        when FrameType::CONTINUATION
+          # TODO
         end
-        stream = ctx.stream
-        stream.rx << frame
-
-        []
       end
     end
     # rubocop: enable Metrics/AbcSize
