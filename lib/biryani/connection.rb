@@ -39,19 +39,7 @@ module Biryani
           self.class.do_send(io, frame, false)
         end
 
-        loop do
-          txs = @stream_ctxs.values.map(&:tx)
-          break if txs.empty?
-
-          _, pair = Ractor.select(*txs)
-          send_frame, state = pair
-          send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
-          self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
-
-          @stream_ctxs[send_frame.stream_id].close if state == :closed
-          self.class.close_streams(@stream_ctxs, @data_buffer)
-        end
-
+        send_loop(io)
         break if io.eof?
       end
     end
@@ -115,6 +103,22 @@ module Biryani
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
+
+    # @param io [IO]
+    def send_loop(io)
+      loop do
+        txs = @stream_ctxs.values.map(&:tx)
+        break if txs.empty?
+
+        _, pair = Ractor.select(*txs)
+        send_frame, state = pair
+        send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders)
+        self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
+
+        @stream_ctxs[send_frame.stream_id].close if state == :closed
+        self.class.close_streams(@stream_ctxs, @data_buffer)
+      end
+    end
 
     # @param stream_ctxs [Hash<Integer, StreamContext>]
     # @param data_buffer [DataBuffer]
