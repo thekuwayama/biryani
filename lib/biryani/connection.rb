@@ -42,6 +42,10 @@ module Biryani
         send_loop(io)
         break if io.eof?
       end
+    rescue Error::ConnectionError => e
+      self.class.do_send(io, e.goaway(0), true) # TODO: last stream id
+    rescue StandardError
+      self.class.do_send(io, Frame::Goaway.new(0, ErrorCode::INTERNAL_ERROR, 'internal error'), true) # TODO: last stream id
     end
 
     # @param frame [Object]
@@ -63,7 +67,7 @@ module Biryani
       typ = frame.f_type
       case typ
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-        raise 'protocol_error' # TODO: send error
+        raise Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")
       when FrameType::SETTINGS
         pair = self.class.handle_settings(frame, @send_settings, @decoder)
         return [] if pair.nil?
@@ -89,6 +93,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
@@ -119,7 +124,11 @@ module Biryani
         self.class.handle_window_update(frame, @send_window, @stream_ctxs)
         @data_buffer.take!(@send_window, @stream_ctxs)
       end
+    rescue Error::StreamError => e
+      self.class.close_stream(e.stream_id, @stream_ctxs)
+      [e.rst_stream]
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
@@ -197,9 +206,11 @@ module Biryani
     end
 
     # @param io [IO]
+    #
+    # @raise ConnectionError
     def self.read_http2_magic(io)
       s = io.read(CONNECTION_PREFACE_LENGTH)
-      raise 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
+      raise Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
     end
 
     # @param rst_stream [RstStream]
