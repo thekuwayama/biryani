@@ -43,9 +43,9 @@ module Biryani
         break if io.eof?
       end
     rescue Error::ConnectionError => e
-      self.class.do_send(io, e.goaway(0), true) # TODO: last stream id
+      self.class.do_send(io, e.goaway(last_stream_id), true)
     rescue StandardError
-      self.class.do_send(io, Frame::Goaway.new(0, ErrorCode::INTERNAL_ERROR, 'internal error'), true) # TODO: last stream id
+      self.class.do_send(io, Frame::Goaway.new(last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     end
 
     # @param frame [Object]
@@ -55,7 +55,10 @@ module Biryani
       if frame.stream_id.zero?
         handle_connection_frame(frame)
       else
-        handle_stream_frame(frame)
+        handle_stream_frame(frame).each do |f|
+          stream_id = f.stream_id
+          @stream_ctxs[stream_id].state.transition!(f, :send)
+        end
       end
     end
 
@@ -93,7 +96,6 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
-    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
@@ -125,17 +127,15 @@ module Biryani
         @data_buffer.take!(@send_window, @stream_ctxs)
       end
     rescue Error::StreamError => e
-      self.class.close_stream(e.stream_id, @stream_ctxs)
       [e.rst_stream]
     end
-    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @param io [IO]
     def send_loop(io)
       loop do
-        txs = @stream_ctxs.values.map(&:tx)
+        txs = @stream_ctxs.filter { |_, ctx| !ctx.closed? }.values.map(&:tx)
         break if txs.empty?
 
         _, pair = Ractor.select(*txs)
@@ -146,6 +146,11 @@ module Biryani
         @stream_ctxs[send_frame.stream_id].state = state
         self.class.close_streams(@stream_ctxs, @data_buffer)
       end
+    end
+
+    # @return [Integer]
+    def last_stream_id
+      @stream_ctxs.keys.max || 0
     end
 
     # @param stream_ctxs [Hash<Integer, StreamContext>]
