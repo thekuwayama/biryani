@@ -20,7 +20,7 @@ RSpec.describe Connection do
       StringIO.new("\x00xffPRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
     end
     it 'should not read' do
-      expect { Connection.read_http2_magic(io3) }.to raise_error(RuntimeError)
+      expect { Connection.read_http2_magic(io3) }.to raise_error Error::ConnectionError
     end
   end
 end

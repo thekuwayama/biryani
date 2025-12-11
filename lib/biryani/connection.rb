@@ -37,11 +37,16 @@ module Biryani
         recv_frame = Frame.read(io)
         dispatch(recv_frame).each do |frame|
           self.class.do_send(io, frame, false)
+          @stream_ctxs[frame.stream_id].state.transition!(frame, :send) unless frame.stream_id.zero?
         end
 
         send_loop(io)
         break if io.eof?
       end
+    rescue Error::ConnectionError => e
+      self.class.do_send(io, e.goaway(last_stream_id), true)
+    rescue StandardError
+      self.class.do_send(io, Frame::Goaway.new(last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     end
 
     # @param frame [Object]
@@ -63,7 +68,7 @@ module Biryani
       typ = frame.f_type
       case typ
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-        raise 'protocol_error' # TODO: send error
+        raise Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")
       when FrameType::SETTINGS
         pair = self.class.handle_settings(frame, @send_settings, @decoder)
         return [] if pair.nil?
@@ -89,6 +94,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
@@ -96,11 +102,11 @@ module Biryani
       typ = frame.f_type
       case typ
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-        raise 'protocol_error' # TODO: send error
+        raise Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
         frame = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
         ctx = @stream_ctxs[stream_id]
-        raise 'protocol_error' if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
+        raise Error::StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
 
         if ctx.nil?
           ctx = StreamContext.new
@@ -109,6 +115,7 @@ module Biryani
 
         stream = ctx.stream
         stream.rx << frame
+        ctx.state.transition!(frame, :recv)
         []
       when FrameType::PUSH_PROMISE
         # TODO
@@ -119,24 +126,30 @@ module Biryani
         self.class.handle_window_update(frame, @send_window, @stream_ctxs)
         @data_buffer.take!(@send_window, @stream_ctxs)
       end
+    rescue Error::StreamError => e
+      [e.rst_stream]
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @param io [IO]
     def send_loop(io)
       loop do
-        txs = @stream_ctxs.values.map(&:tx)
+        txs = @stream_ctxs.filter { |_, ctx| !ctx.closed? }.values.map(&:tx)
         break if txs.empty?
 
-        _, pair = Ractor.select(*txs)
-        send_frame, state = pair
+        _, send_frame = Ractor.select(*txs)
         send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
         self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
-        @stream_ctxs[send_frame.stream_id].state = state
         self.class.close_streams(@stream_ctxs, @data_buffer)
       end
+    end
+
+    # @return [Integer]
+    def last_stream_id
+      @stream_ctxs.keys.max || 0
     end
 
     # @param stream_ctxs [Hash<Integer, StreamContext>]
@@ -171,6 +184,7 @@ module Biryani
     def self.send(io, frame, send_window, stream_ctxs, data_buffer)
       if frame.f_type != FrameType::DATA
         do_send(io, frame, false)
+        stream_ctxs[frame.stream_id].state.transition!(frame, :send) unless frame.stream_id.zero?
         return
       end
 
@@ -197,9 +211,11 @@ module Biryani
     end
 
     # @param io [IO]
+    #
+    # @raise ConnectionError
     def self.read_http2_magic(io)
       s = io.read(CONNECTION_PREFACE_LENGTH)
-      raise 'protocol_error' if s != CONNECTION_PREFACE # TODO: send error
+      raise Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
     end
 
     # @param rst_stream [RstStream]
