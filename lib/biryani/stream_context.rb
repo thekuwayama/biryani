@@ -1,14 +1,13 @@
 module Biryani
   class StreamContext
-    attr_accessor :stream, :tx, :send_window, :recv_window
-    attr_writer :state # :idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed
+    attr_accessor :stream, :tx, :send_window, :recv_window, :state
 
     def initialize
       @tx = channel
       @stream = Stream.new(@tx)
       @send_window = Window.new
       @recv_window = Window.new
-      @state = :idle
+      @state = State.new
     end
 
     # @return [Ractor]

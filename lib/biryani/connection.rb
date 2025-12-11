@@ -37,6 +37,7 @@ module Biryani
         recv_frame = Frame.read(io)
         dispatch(recv_frame).each do |frame|
           self.class.do_send(io, frame, false)
+          @stream_ctxs[frame.stream_id].state.transition!(frame, :send) unless frame.stream_id.zero?
         end
 
         send_loop(io)
@@ -55,10 +56,7 @@ module Biryani
       if frame.stream_id.zero?
         handle_connection_frame(frame)
       else
-        handle_stream_frame(frame).each do |f|
-          stream_id = f.stream_id
-          @stream_ctxs[stream_id].state.transition!(f, :send)
-        end
+        handle_stream_frame(frame)
       end
     end
 
@@ -117,6 +115,7 @@ module Biryani
 
         stream = ctx.stream
         stream.rx << frame
+        ctx.state.transition!(frame, :recv)
         []
       when FrameType::PUSH_PROMISE
         # TODO
@@ -140,12 +139,10 @@ module Biryani
         txs = @stream_ctxs.filter { |_, ctx| !ctx.closed? }.values.map(&:tx)
         break if txs.empty?
 
-        _, pair = Ractor.select(*txs)
-        send_frame, state = pair
+        _, send_frame = Ractor.select(*txs)
         send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
         self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
 
-        @stream_ctxs[send_frame.stream_id].state = state
         self.class.close_streams(@stream_ctxs, @data_buffer)
       end
     end
@@ -187,6 +184,7 @@ module Biryani
     def self.send(io, frame, send_window, stream_ctxs, data_buffer)
       if frame.f_type != FrameType::DATA
         do_send(io, frame, false)
+        stream_ctxs[frame.stream_id].state.transition!(frame, :send) unless frame.stream_id.zero?
         return
       end
 

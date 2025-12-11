@@ -12,11 +12,9 @@ module Biryani
     def initialize(tx)
       @rx = Ractor.new(tx) do |tx|
         bucket = Bucket.new(fields: [], data: '')
-        state = State.new
 
         loop do
           recv_frame = Ractor.receive
-          state.transition!(recv_frame, :recv)
 
           case recv_frame.f_type
           when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
@@ -26,12 +24,8 @@ module Biryani
 
             if recv_frame.end_stream?
               # TODO: Hello, world!
-              send_frame = Frame::RawHeaders.new(true, false, recv_frame.stream_id, nil, nil, [[':status', '200']], nil)
-              state.transition!(send_frame, :send)
-              tx << [send_frame, state.to_sym]
-              send_frame = Frame::Data.new(true, recv_frame.stream_id, 'Hello, world!', nil)
-              state.transition!(send_frame, :send)
-              tx << [send_frame, state.to_sym]
+              tx << Frame::RawHeaders.new(true, false, recv_frame.stream_id, nil, nil, [[':status', '200']], nil)
+              tx << Frame::Data.new(true, recv_frame.stream_id, 'Hello, world!', nil)
               break
             end
           when FrameType::HEADERS
@@ -40,12 +34,8 @@ module Biryani
 
             if recv_frame.end_stream?
               # TODO: Hello, world!
-              send_frame = Frame::RawHeaders.new(true, false, recv_frame.stream_id, nil, nil, [[':status', '200']], nil)
-              state.transition!(send_frame, :send)
-              tx << [send_frame, state.to_sym]
-              send_frame = Frame::Data.new(true, recv_frame.stream_id, 'Hello, world!', nil)
-              state.transition!(send_frame, :send)
-              tx << [send_frame, state.to_sym]
+              tx << Frame::RawHeaders.new(true, false, recv_frame.stream_id, nil, nil, [[':status', '200']], nil)
+              tx << Frame::Data.new(true, recv_frame.stream_id, 'Hello, world!', nil)
               break
             end
           when FrameType::PRIORITY
