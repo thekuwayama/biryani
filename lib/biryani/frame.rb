@@ -107,6 +107,7 @@ require_relative 'frame/raw_continuation'
 require_relative 'frame/raw_headers'
 require_relative 'frame/rst_stream'
 require_relative 'frame/settings'
+require_relative 'frame/unknown'
 require_relative 'frame/window_update'
 
 module Biryani
@@ -135,9 +136,11 @@ module Biryani
       len = s.unpack1('N') >> 8 # shift right8 uint32 to get uint24
       typ = s[3].unpack1('C')
 
+      return Frame::Unknown.read(s + io.read(len + 5)) unless FRAME_MAP.key?(typ)
+
       FRAME_MAP[typ].read(s + io.read(len + 5))
-      # TODO: Frame.read checks for syntax errors & unknown frame type
-      # TODO: Connection.handle_* & Stream.handle_* methods check for semantic errors
+    rescue StandardError
+      raise Error::FrameReadError
     end
   end
 end
