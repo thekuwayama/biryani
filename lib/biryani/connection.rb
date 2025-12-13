@@ -47,6 +47,8 @@ module Biryani
       self.class.do_send(io, e.goaway(last_stream_id), true)
     rescue StandardError
       self.class.do_send(io, Frame::Goaway.new(last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
+    ensure
+      self.class.close_all_streams(@stream_ctxs)
     end
 
     # @param frame [Object]
@@ -150,6 +152,16 @@ module Biryani
     # @return [Integer]
     def last_stream_id
       @stream_ctxs.keys.max || 0
+    end
+
+    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    def self.close_all_streams(stream_ctxs)
+      stream_ctxs.each_value do |ctx|
+        ctx.rx.close_incoming
+        ctx.tx.close_incoming
+      end
+
+      stream_ctxs.each(&:close)
     end
 
     # @param stream_ctxs [Hash<Integer, StreamContext>]
