@@ -44,7 +44,7 @@ module Biryani
         end
 
         send_loop(io)
-        self.class.do_close_streams(@stream_ctxs, @data_buffer)
+        self.class.delete_streams(@stream_ctxs, @data_buffer)
         break if io.eof? || closed?
       end
     rescue StandardError
@@ -220,7 +220,7 @@ module Biryani
 
     # @param stream_ctxs [Hash<Integer, StreamContext>]
     # @param data_buffer [DataBuffer]
-    def self.do_close_streams(stream_ctxs, data_buffer)
+    def self.delete_streams(stream_ctxs, data_buffer)
       closed_ids = stream_ctxs.filter { |_, ctx| ctx.closed? }.keys
       closed_ids.filter! { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
