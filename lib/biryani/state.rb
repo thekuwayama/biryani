@@ -132,5 +132,19 @@ module Biryani
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
+
+    def close
+      @state = :closed
+    end
+
+    # @return [Boolean]
+    def closed?
+      @state == :closed
+    end
+
+    # @return [Boolean]
+    def active?
+      @state == :open || @state == :half_closed_local || @state == :half_closed_remote
+    end
   end
 end
