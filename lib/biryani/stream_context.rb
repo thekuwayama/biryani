@@ -1,10 +1,11 @@
 module Biryani
   class StreamContext
-    attr_accessor :stream, :tx, :send_window, :recv_window, :state
+    attr_accessor :stream, :tx, :err, :send_window, :recv_window, :state
 
     def initialize
       @tx = channel
-      @stream = Stream.new(@tx)
+      @err = channel
+      @stream = Stream.new(@tx, @err)
       @send_window = Window.new
       @recv_window = Window.new
       @state = State.new
@@ -22,12 +23,12 @@ module Biryani
 
     # @return [Boolean]
     def closed?
-      @state == :closed
+      @state.closed?
     end
 
     # @return [Boolean]
     def active?
-      @state == :open || @state == :half_closed_local || @state == :half_closed_remote
+      @state.active?
     end
   end
 end

@@ -5,20 +5,23 @@ module Biryani
     Bucket = Struct.new(:fields, :data)
 
     # @param tx [Ractor] port
+    # @param err [Ractor] port
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/BlockLength
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
-    def initialize(tx)
-      @rx = Ractor.new(tx) do |tx|
+    def initialize(tx, err)
+      @rx = Ractor.new(tx, err) do |tx, err|
         bucket = Bucket.new(fields: [], data: '')
 
         loop do
           recv_frame = Ractor.receive
 
-          case recv_frame.f_type
+          typ = recv_frame.f_type
+          stream_id = recv_frame.stream_id
+          case typ
           when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-            raise 'protocol_error' # TODO: send error
+            err << Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%08x', stream_id)}")
           when FrameType::DATA
             bucket.data += recv_frame.data
 
@@ -41,11 +44,11 @@ module Biryani
           when FrameType::PRIORITY
             self.class.handle_priority(recv_frame)
           when FrameType::RST_STREAM
-            raise 'unreachable' # TODO: internal error
+            err << Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'internal error')
           when FrameType::PUSH_PROMISE
             # TODO
           when FrameType::WINDOW_UPDATE
-            raise 'unreachable' # TODO: internal error
+            err << Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'internal error')
           when FrameType::CONTINUATION
             # TODO: check recv_frame.end_headers?
             bucket.fields += recv_frame.fields
