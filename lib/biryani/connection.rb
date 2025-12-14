@@ -91,6 +91,9 @@ module Biryani
       when FrameType::WINDOW_UPDATE
         self.class.handle_window_update(frame, @send_window, @stream_ctxs)
         @data_buffer.take!(@send_window, @stream_ctxs)
+      else
+        # ignore unknown frame type
+        []
       end
     end
     # rubocop: enable Metrics/CyclomaticComplexity
@@ -128,6 +131,9 @@ module Biryani
       when FrameType::WINDOW_UPDATE
         self.class.handle_window_update(frame, @send_window, @stream_ctxs)
         @data_buffer.take!(@send_window, @stream_ctxs)
+      else
+        # ignore unknown frame type
+        []
       end
     end
     # rubocop: enable Metrics/CyclomaticComplexity
