@@ -21,7 +21,7 @@ module Biryani
           stream_id = recv_frame.stream_id
           case typ
           when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-            err << Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")
+            err << Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%08x', stream_id)}")
           when FrameType::DATA
             bucket.data += recv_frame.data
 
