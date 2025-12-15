@@ -7,13 +7,12 @@ module Biryani
 
     class FrameReadError < Error; end
 
-    class ConnectionError < Error
+    class ConnectionError
       # @param code [Integer]
       # @param debug [String]
       def initialize(code, debug)
         @code = code
         @debug = debug
-        super(debug)
       end
 
       # @param last_stream_id [Integer]
@@ -24,13 +23,14 @@ module Biryani
       end
     end
 
-    class StreamError < Error
+    class StreamError
       # @param code [Integer]
       # @param stream_id [stream_id]
-      def initialize(code, stream_id, msg)
+      # @param debug [String]
+      def initialize(code, stream_id, debug)
         @code = code
         @stream_id = stream_id
-        super(msg)
+        @debug = debug
       end
 
       # @return [RstStream]
