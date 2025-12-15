@@ -96,6 +96,8 @@ module Biryani
         fields = decoder.decode(@fragment)
 
         RawHeaders.new(@end_headers, @end_stream, @stream_id, @stream_dependency, @weight, fields, @padding)
+      rescue StandardError
+        Error::ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
       end
       # rubocop: enable Metrics/AbcSize
     end

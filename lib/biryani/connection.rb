@@ -101,6 +101,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
@@ -110,7 +111,10 @@ module Biryani
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
         Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
-        frame = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
+        obj = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
+        return obj if obj.is_a?(Error::ConnectionError)
+
+        frame = obj
         ctx = @stream_ctxs[stream_id]
         return Error::StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
 
@@ -136,6 +140,7 @@ module Biryani
         []
       end
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
