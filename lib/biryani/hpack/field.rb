@@ -127,7 +127,7 @@ module Biryani
         elsif (byte & 0b11110000).zero?
           decode_literal_value_without_indexing(s, cursor)
         else
-          raise 'unreachable' # TODO: internal error
+          raise 'unreachable'
         end
       end
       # rubocop: enable Metrics/CyclomaticComplexity
@@ -147,7 +147,9 @@ module Biryani
       # @return [Integer]
       def self.decode_indexed(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 7, cursor)
-        field = if index < STATIC_TABLE_SIZE
+        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
+
+        field = if index <= STATIC_TABLE_SIZE
                   STATIC_TABLE[index - 1]
                 else
                   dynamic_table[index - 1 - STATIC_TABLE_SIZE]
@@ -202,7 +204,9 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 6, cursor)
-        name = if index < STATIC_TABLE_SIZE
+        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
+
+        name = if index <= STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
                else
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
@@ -276,7 +280,9 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_never_indexed(s, cursor)
         index, c = Integer.decode(s, 4, cursor)
-        name = if index < STATIC_TABLE_SIZE
+        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
+
+        name = if index <= STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
                else
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
@@ -328,7 +334,9 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_without_indexing(s, cursor)
         index, c = Integer.decode(s, 4, cursor)
-        name = if index < STATIC_TABLE_SIZE
+        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
+
+        name = if index <= STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
                else
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
