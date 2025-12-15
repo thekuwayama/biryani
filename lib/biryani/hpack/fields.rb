@@ -18,7 +18,7 @@ module Biryani
         fields = []
         while cursor < s.bytesize
           field, cursor = Field.decode(s, cursor, dynamic_table)
-          fields << field
+          fields << field unless field.nil?
         end
 
         fields

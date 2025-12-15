@@ -1,6 +1,8 @@
 module Biryani
   module HPACK
     class DynamicTable
+      attr_reader :size, :limit
+
       # @param limit [Integer]
       def initialize(limit)
         @table = []
@@ -44,12 +46,16 @@ module Biryani
       end
 
       # @param new_limit [Integer]
-      def limit!(new_limit)
+      def chomp!(new_limit)
         while @size > new_limit
           n, v = @table.pop
           @size -= n.bytesize + v.bytesize + 32
         end
+      end
 
+      # @param new_limit [Integer]
+      def limit!(new_limit)
+        chomp!(new_limit)
         @limit = new_limit
       end
     end

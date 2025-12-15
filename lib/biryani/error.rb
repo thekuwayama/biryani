@@ -5,6 +5,8 @@ module Biryani
 
     class HuffmanDecodeError < Error; end
 
+    class HPACKDecodeError < Error; end
+
     class FrameReadError < Error; end
 
     class ConnectionError

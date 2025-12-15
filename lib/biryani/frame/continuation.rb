@@ -44,7 +44,7 @@ module Biryani
         fields = decoder.decode(@fragment)
 
         RawContinuation.new(@end_headers, @stream_id, fields)
-      rescue StandardError
+      rescue Error::HuffmanDecodeError, Error::HPACKDecodeError
         Error::ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
       end
     end

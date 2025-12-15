@@ -117,7 +117,7 @@ module Biryani
         elsif (byte & 0b01000000).positive?
           decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         elsif (byte & 0b00100000).positive?
-          # TODO: Dynamic Table Size Update
+          decode_dynamic_table_size_update(s, cursor, dynamic_table)
         elsif byte == 0b00010000
           decode_literal_field_never_indexed(s, cursor)
         elsif (byte & 0b00010000).positive?
@@ -211,6 +211,26 @@ module Biryani
         dynamic_table.store(name, value)
 
         [[name, value], c]
+      end
+
+      #   0   1   2   3   4   5   6   7
+      # +---+---+---+---+---+---+---+---+
+      # | 0 | 0 | 1 |   Max size (5+)   |
+      # +---+---------------------------+
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.3
+      #
+      # @param s [String]
+      # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
+      #
+      # @return [nil]
+      # @return [Integer]
+      def self.decode_dynamic_table_size_update(s, cursor, dynamic_table)
+        max_size, c = Integer.decode(s, 5, cursor)
+        raise Error::HPACKDecodeError if max_size > dynamic_table.limit
+
+        dynamic_table.chomp!(max_size)
+        [nil, c]
       end
 
       #   0   1   2   3   4   5   6   7
