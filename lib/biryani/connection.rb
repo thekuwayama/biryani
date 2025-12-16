@@ -72,7 +72,7 @@ module Biryani
       typ = frame.f_type
       case typ
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-        Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")
+        ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")
       when FrameType::SETTINGS
         pair = self.class.handle_settings(frame, @send_settings, @decoder)
         return [] if pair.nil?
@@ -109,14 +109,14 @@ module Biryani
       typ = frame.f_type
       case typ
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-        Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")
+        ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
         obj = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
-        return obj if obj.is_a?(Error::ConnectionError)
+        return obj if obj.is_a?(ConnectionError)
 
         frame = obj
         ctx = @stream_ctxs[stream_id]
-        return Error::StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
+        return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
 
         if ctx.nil?
           ctx = StreamContext.new
@@ -181,9 +181,9 @@ module Biryani
     # @return [Frame]
     def self.ensure_frame(obj, last_stream_id)
       case obj
-      when Error::ConnectionError
+      when ConnectionError
         obj.goaway(last_stream_id)
-      when Error::StreamError
+      when StreamError
         obj.rst_stream
       else
         obj
@@ -291,7 +291,7 @@ module Biryani
     # @return [nil, Error]
     def self.read_http2_magic(io)
       s = io.read(CONNECTION_PREFACE_LENGTH)
-      Error::ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
+      ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
     end
 
     # @param rst_stream [RstStream]

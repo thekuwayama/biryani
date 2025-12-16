@@ -10,7 +10,7 @@ RSpec.describe Connection do
     end
 
     let(:connection_error) do
-      Error::ConnectionError.new(ErrorCode::NO_ERROR, 'debug')
+      ConnectionError.new(ErrorCode::NO_ERROR, 'debug')
     end
     it 'should ensure' do
       frame = Connection.ensure_frame(connection_error, 0x01)
@@ -18,7 +18,7 @@ RSpec.describe Connection do
     end
 
     let(:stream_error) do
-      Error::StreamError.new(ErrorCode::NO_ERROR, 0x01, 'msg')
+      StreamError.new(ErrorCode::NO_ERROR, 0x01, 'debug')
     end
     it 'should ensure' do
       frame = Connection.ensure_frame(stream_error, 0x01)

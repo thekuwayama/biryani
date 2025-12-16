@@ -97,7 +97,7 @@ module Biryani
 
         RawHeaders.new(@end_headers, @end_stream, @stream_id, @stream_dependency, @weight, fields, @padding)
       rescue Error::HuffmanDecodeError, Error::HPACKDecodeError
-        Error::ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
+        ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
       end
       # rubocop: enable Metrics/AbcSize
     end

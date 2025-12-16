@@ -45,7 +45,7 @@ module Biryani
 
         RawContinuation.new(@end_headers, @stream_id, fields)
       rescue Error::HuffmanDecodeError, Error::HPACKDecodeError
-        Error::ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
+        ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
       end
     end
   end
