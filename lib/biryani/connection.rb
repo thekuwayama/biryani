@@ -31,8 +31,14 @@ module Biryani
     end
 
     # @param io [IO]
+    # rubocop: disable Metrics/AbcSize
     def serve(io)
-      self.class.read_http2_magic(io)
+      err = self.class.read_http2_magic(io)
+      unless err.nil?
+        self.class.do_send(io, err.goaway(last_stream_id), true)
+        return
+      end
+
       self.class.do_send(io, Frame::Settings.new(false, []), true)
 
       loop do
@@ -52,10 +58,11 @@ module Biryani
     ensure
       self.class.close_all_streams(@stream_ctxs)
     end
+    # rubocop: enable Metrics/AbcSize
 
     # @param frame [Object]
     #
-    # @return [Array<Object>, Error] frames or error
+    # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     def dispatch(frame)
       if frame.stream_id.zero?
         handle_connection_frame(frame)
@@ -66,13 +73,13 @@ module Biryani
 
     # @param frame [Object]
     #
-    # @return [Array<Object>, Error] frames or error
+    # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     # rubocop: disable Metrics/CyclomaticComplexity
     def handle_connection_frame(frame)
       typ = frame.f_type
       case typ
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-        ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")
+        [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
         pair = self.class.handle_settings(frame, @send_settings, @decoder)
         return [] if pair.nil?
@@ -100,7 +107,7 @@ module Biryani
 
     # @param frame [Object]
     #
-    # @return [Array<Object>] frames
+    # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
@@ -109,14 +116,14 @@ module Biryani
       typ = frame.f_type
       case typ
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-        ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")
+        [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
         obj = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
         return obj if obj.is_a?(ConnectionError)
 
         frame = obj
         ctx = @stream_ctxs[stream_id]
-        return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
+        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
 
         if ctx.nil?
           ctx = StreamContext.new
@@ -175,7 +182,7 @@ module Biryani
       @closed
     end
 
-    # @param obj [Object] frame or error
+    # @param obj [Object, ConnectionError, StreamError] frame or error
     # @param last_stream_id [Integer]
     #
     # @return [Frame]
