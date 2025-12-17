@@ -11,7 +11,7 @@ module Biryani
     #
     # @return [Goaway]
     def goaway(last_stream_id)
-      Frame::Goaway.new(last_stream_id, @code, @debug)
+      Frame::Goaway.new(0, last_stream_id, @code, @debug)
     end
   end
 end

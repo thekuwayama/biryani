@@ -15,7 +15,7 @@ RSpec.describe Connection do
     end
 
     let(:goaway) do
-      Frame::Goaway.new(2, ErrorCode::NO_ERROR, 'debug')
+      Frame::Goaway.new(0, 2, ErrorCode::NO_ERROR, 'debug')
     end
     it 'should transition' do
       Connection.transition_state(goaway, stream_ctxs)

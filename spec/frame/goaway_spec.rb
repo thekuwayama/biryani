@@ -3,7 +3,7 @@ require_relative '../spec_helper'
 RSpec.describe Frame::Goaway do
   context do
     let(:goaway1) do
-      Frame::Goaway.new(30, 9, 'hpack is broken')
+      Frame::Goaway.new(0, 30, 9, 'hpack is broken')
     end
     it 'should encode' do
       expect(goaway1.to_binary_s).to eq "\x00\x00\x17\x07\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x00\x00\x00\x09\x68\x70\x61\x63\x6b\x20\x69\x73\x20\x62\x72\x6f\x6b\x65\x6e".b

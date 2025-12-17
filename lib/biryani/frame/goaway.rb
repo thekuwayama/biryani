@@ -6,9 +6,9 @@ module Biryani
       # @param last_stream_id [Integer]
       # @param error_code [Integer]
       # @param debug [String]
-      def initialize(last_stream_id, error_code, debug)
+      def initialize(stream_id, last_stream_id, error_code, debug)
         @f_type = FrameType::GOAWAY
-        @stream_id = 0
+        @stream_id = stream_id
         @last_stream_id = last_stream_id
         @error_code = error_code
         @debug = debug
@@ -26,10 +26,11 @@ module Biryani
       #
       # @return [Goaway]
       def self.read(s)
+        _, _, _, stream_id = Frame.read_header(s)
         last_stream_id, error_code = s[9..16].unpack('NN')
         debug = s[17..]
 
-        Goaway.new(last_stream_id, error_code, debug)
+        Goaway.new(stream_id, last_stream_id, error_code, debug)
       end
     end
   end
