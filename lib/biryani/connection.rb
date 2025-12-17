@@ -119,7 +119,7 @@ module Biryani
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
         obj = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
-        return obj if obj.is_a?(ConnectionError)
+        return [obj] if obj.is_a?(ConnectionError)
 
         frame = obj
         ctx = @stream_ctxs[stream_id]

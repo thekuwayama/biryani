@@ -98,8 +98,6 @@ module Biryani
         "\x40#{String.encode(name)}#{String.encode(value)}"
       end
 
-      # TODO: Dynamic Table Size Update
-
       # @param s [String]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
