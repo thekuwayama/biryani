@@ -145,6 +145,7 @@ module Biryani
       # @return [Integer]
       def self.decode_indexed(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 7, cursor)
+        raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
 
         field = if index <= STATIC_TABLE_SIZE
@@ -202,6 +203,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 6, cursor)
+        raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
 
         name = if index <= STATIC_TABLE_SIZE
@@ -278,6 +280,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_never_indexed(s, cursor)
         index, c = Integer.decode(s, 4, cursor)
+        raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
 
         name = if index <= STATIC_TABLE_SIZE
@@ -332,6 +335,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_without_indexing(s, cursor)
         index, c = Integer.decode(s, 4, cursor)
+        raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.size
 
         name = if index <= STATIC_TABLE_SIZE
