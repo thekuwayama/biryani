@@ -3,7 +3,7 @@ require_relative '../spec_helper'
 RSpec.describe Frame::Ping do
   context do
     let(:ping1) do
-      Frame::Ping.new(false, 'deadbeef')
+      Frame::Ping.new(false, 0, 'deadbeef')
     end
     it 'should encode' do
       expect(ping1.to_binary_s).to eq "\x00\x00\x08\x06\x00\x00\x00\x00\x00\x64\x65\x61\x64\x62\x65\x65\x66".b

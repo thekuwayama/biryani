@@ -4,11 +4,12 @@ module Biryani
       attr_reader :f_type, :stream_id, :opaque
 
       # @param ack [Boolean]
+      # @param stream_id [Integer]
       # @param opaque [String]
-      def initialize(ack, opaque)
+      def initialize(ack, stream_id, opaque)
         @f_type = FrameType::PING
         @ack = ack
-        @stream_id = 0
+        @stream_id = stream_id
         @opaque = opaque
       end
 
@@ -29,11 +30,11 @@ module Biryani
       #
       # @return [Ping]
       def self.read(s)
-        _, _, flags, = Frame.read_header(s)
+        _, _, flags, stream_id = Frame.read_header(s)
         ack = Frame.read_ack(flags)
-        opaque = s[9..] # TODO: frame_size_error
+        opaque = s[9..]
 
-        Ping.new(ack, opaque)
+        Ping.new(ack, stream_id, opaque)
       end
     end
   end

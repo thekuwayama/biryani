@@ -87,10 +87,10 @@ module Biryani
         settings_ack, @max_streams = pair
         [settings_ack]
       when FrameType::PING
-        ping_ack = self.class.handle_ping(frame)
-        return [ping_ack] unless ping_ack.nil?
+        obj = self.class.handle_ping(frame)
+        return [] if obj.nil?
 
-        []
+        [self.class.ensure_frame(obj, last_stream_id)]
       when FrameType::GOAWAY
         self.class.handle_goaway(frame)
         # TODO: logging error
@@ -324,9 +324,12 @@ module Biryani
 
     # @param ping [Ping]
     #
-    # @return [Ping, nil]
+    # @return [Ping, nil, ConnectionError]
     def self.handle_ping(ping)
-      Frame::Ping.new(true, ping.opaque) unless ping.ack?
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "PING invalid stream identifier #{format('0x%02x', stream_id)}") unless ping.stream_id.zero?
+      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'PING invalid opaque size') if ping.opaque.bytesize != 8
+
+      Frame::Ping.new(true, 0, ping.opaque) unless ping.ack?
     end
 
     # @param _goaway [Goaway]
