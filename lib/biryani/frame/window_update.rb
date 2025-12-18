@@ -23,9 +23,10 @@ module Biryani
       #
       # @return [WindowUpdate]
       def self.read(s)
-        _, _, _, stream_id = Frame.read_header(s)
-        window_size_increment = s[9..].unpack1('N') % 2**31
+        payload_length, _, _, stream_id = Frame.read_header(s)
+        raise Error::FrameReadError if payload_length != 4 || s[9..].bytesize != 4 # TODO: FRAME_SIZE_ERROR
 
+        window_size_increment = s[9..].unpack1('N')
         WindowUpdate.new(stream_id, window_size_increment)
       end
     end

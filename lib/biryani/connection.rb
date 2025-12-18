@@ -54,7 +54,7 @@ module Biryani
         break if io.eof? || closed?
       end
     rescue StandardError
-      self.class.do_send(io, Frame::Goaway.new(last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
+      self.class.do_send(io, Frame::Goaway.new(0, last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
       self.class.close_all_streams(@stream_ctxs)
     end
@@ -90,13 +90,15 @@ module Biryani
         obj = self.class.handle_ping(frame)
         return [] if obj.nil?
 
-        [self.class.ensure_frame(obj, last_stream_id)]
+        [obj]
       when FrameType::GOAWAY
         self.class.handle_goaway(frame)
         # TODO: logging error
         []
       when FrameType::WINDOW_UPDATE
-        self.class.handle_window_update(frame, @send_window, @stream_ctxs)
+        err = self.class.handle_connection_window_update(frame, @send_window)
+        return [err] unless err.nil?
+
         @data_buffer.take!(@send_window, @stream_ctxs)
       else
         # ignore unknown frame type
@@ -140,7 +142,9 @@ module Biryani
         self.class.handle_rst_stream(frame, @stream_ctxs)
         []
       when FrameType::WINDOW_UPDATE
-        self.class.handle_window_update(frame, @send_window, @stream_ctxs)
+        err = self.class.handle_stream_window_update(frame, @stream_ctxs)
+        return [err] unless err.nil?
+
         @data_buffer.take!(@send_window, @stream_ctxs)
       else
         # ignore unknown frame type
@@ -337,13 +341,28 @@ module Biryani
 
     # @param window_update [WindowUpdate]
     # @param send_window [Window]
+    #
+    # @return [nil, ConnectionError]
+    def self.handle_connection_window_update(window_update, send_window)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'WINDOW_UPDATE invalid window size increment 0') if window_update.window_size_increment.zero?
+      return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'WINDOW_UPDATE invalid window size increment greater than 2^31-1') \
+        if window_update.window_size_increment > 2**31 - 1
+
+      send_window.increase!(window_update.window_size_increment)
+      nil
+    end
+
+    # @param window_update [WindowUpdate]
     # @param stream_ctxs [Hash<Integer, StreamContext>]
-    def self.handle_window_update(window_update, send_window, stream_ctxs)
-      if window_update.stream_id.zero?
-        send_window.increase!(window_update.window_size_increment)
-      else
-        stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
-      end
+    #
+    # @return [nil, ConnectionError]
+    def self.handle_stream_window_update(window_update, stream_ctxs)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'WINDOW_UPDATE invalid window size increment 0') if window_update.window_size_increment.zero?
+      return StreamError.new(ErrorCode::FLOW_CONTROL_ERROR, window_update.stream_id, 'WINDOW_UPDATE invalid window size increment greater than 2^31-1') \
+        if window_update.window_size_increment > 2**31 - 1
+
+      stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
+      nil
     end
 
     # @return [Hash<Integer, Integer>]
