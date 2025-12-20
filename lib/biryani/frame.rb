@@ -139,8 +139,11 @@ module Biryani
       return Frame::Unknown.read(s + io.read(len + 5)) unless FRAME_MAP.key?(typ)
 
       FRAME_MAP[typ].read(s + io.read(len + 5))
+    rescue Error::FrameReadError
+      ConnectionError.new(ErrorCode::INTERNAL_ERROR, 'internal error') # TODO: handle each error
     rescue StandardError
-      raise Error::FrameReadError
+      # closed
+      nil
     end
   end
 end

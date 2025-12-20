@@ -10,6 +10,7 @@ module Biryani
 
   # rubocop: disable Metrics/ClassLength
   class Connection
+    include Port
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
 
@@ -18,6 +19,7 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
     def initialize
+      @rx = nil
       @max_streams = 0xffffffff
       @stream_ctxs = {} # Hash<Integer, StreamContext>
       @encoder = HPACK::Encoder.new(4_096)
@@ -31,7 +33,6 @@ module Biryani
     end
 
     # @param io [IO]
-    # rubocop: disable Metrics/AbcSize
     def serve(io)
       err = self.class.read_http2_magic(io)
       unless err.nil?
@@ -41,29 +42,63 @@ module Biryani
 
       self.class.do_send(io, Frame::Settings.new(false, []), true)
 
-      loop do
-        recv_frame = Frame.read(io)
-        dispatch(recv_frame).each do |obj|
-          reply_frame = self.class.ensure_frame(obj, last_stream_id)
-          self.class.do_send(io, reply_frame, true)
-          close if self.class.transition_state(reply_frame, @stream_ctxs)
-        end
-
-        send_loop(io)
-        self.class.delete_streams(@stream_ctxs, @data_buffer)
-        break if io.eof? || closed?
-      end
+      recv_loop(io.clone)
+      send_loop(io)
     rescue StandardError
       self.class.do_send(io, Frame::Goaway.new(0, last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
       self.class.close_all_streams(@stream_ctxs)
+      io&.close
+    end
+
+    # @param io [IO]
+    def recv_loop(io)
+      Ractor.new(io, @rx = port) do |io_, rx_|
+        loop do
+          obj = Frame.read(io_)
+          break if obj.nil?
+
+          rx_ << obj
+        end
+      end
+    end
+
+    # @param io [IO]
+    # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/PerceivedComplexity
+    def send_loop(io)
+      loop do
+        ports = @stream_ctxs.values.filter { |ctx| !ctx.closed? }.map(&:tx) + @stream_ctxs.values.map(&:err)
+        ports << @rx
+        break if ports.empty?
+
+        port_, obj = Ractor.select(*ports)
+        if port_ == @rx
+          recv_dispatch(obj).each do |recv_frame|
+            reply_frame = self.class.ensure_frame(recv_frame, last_stream_id)
+            self.class.do_send(io, reply_frame, true)
+            close if self.class.transition_state(reply_frame, @stream_ctxs)
+          end
+        else
+          send_frame = self.class.ensure_frame(obj, last_stream_id)
+          send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
+          close if self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
+
+          self.class.delete_streams(@stream_ctxs, @data_buffer)
+        end
+
+        break if closed?
+      end
     end
     # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param frame [Object]
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
-    def dispatch(frame)
+    def recv_dispatch(frame)
       if frame.stream_id.zero?
         handle_connection_frame(frame)
       else
@@ -154,23 +189,6 @@ module Biryani
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
-
-    # @param io [IO]
-    # rubocop: disable Metrics/CyclomaticComplexity
-    def send_loop(io)
-      loop do
-        errs = @stream_ctxs.values.map(&:err)
-        txs = @stream_ctxs.values.filter { |ctx| !ctx.closed? }.map(&:tx)
-        ports = errs + txs
-        break if ports.empty?
-
-        _, obj = Ractor.select(*ports)
-        send_frame = self.class.ensure_frame(obj, last_stream_id)
-        send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
-        close if self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
-      end
-    end
-    # rubocop: enable Metrics/CyclomaticComplexity
 
     # @return [Integer]
     def last_stream_id

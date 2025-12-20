@@ -6,14 +6,14 @@ RSpec.describe Frame do
       StringIO.new(''.b)
     end
     it 'should not read' do
-      expect { Frame.read(empty) }.to raise_error Error::FrameReadError
+      expect(Frame.read(empty)).to be_kind_of ConnectionError
     end
 
     let(:invalid_header) do
       StringIO.new("\x12\x34\x56\x00\x00".b)
     end
     it 'should not read' do
-      expect { Frame.read(invalid_header) }.to raise_error Error::FrameReadError
+      expect(Frame.read(invalid_header)).to be_kind_of ConnectionError
     end
 
     let(:unknown) do
