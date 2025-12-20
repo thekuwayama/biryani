@@ -79,7 +79,7 @@ module Biryani
           fragment = s[14..]
         elsif padded
           pad_length = s[9].unpack1('C')
-          fragment_length = payload_length - pad_length
+          fragment_length = payload_length - pad_length - 1
           fragment = s[10...10 + fragment_length]
           padding = s[10 + fragment_length..]
         else
