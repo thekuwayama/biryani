@@ -154,10 +154,13 @@ module Biryani
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
-        obj = frame.decode(@decoder) if typ == FrameType::HEADERS || FrameType::CONTINUATION
-        return [obj] if obj.is_a?(ConnectionError)
+        if [FrameType::HEADERS, FrameType::CONTINUATION].include?(typ)
+          obj = frame.decode(@decoder)
+          return [obj] if obj.is_a?(ConnectionError)
 
-        frame = obj
+          frame = obj
+        end
+
         ctx = @streams_ctx[stream_id]
         return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
 
