@@ -153,7 +153,7 @@ module Biryani
       case typ
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
-      when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::CONTINUATION
+      when FrameType::DATA, FrameType::HEADERS, FrameType::CONTINUATION
         if [FrameType::HEADERS, FrameType::CONTINUATION].include?(typ)
           obj = frame.decode(@decoder)
           return [obj] if obj.is_a?(ConnectionError)
@@ -167,6 +167,9 @@ module Biryani
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
         ctx.stream.rx << frame
         ctx.state.transition!(frame, :recv)
+        []
+      when FrameType::PRIORITY
+        # ignore
         []
       when FrameType::PUSH_PROMISE
         # TODO
