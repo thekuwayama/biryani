@@ -5,13 +5,16 @@ RSpec.describe Connection do
     let(:window_update) do
       Frame::WindowUpdate.new(1, 1000)
     end
-    let(:stream_ctxs) do
-      { 1 => StreamContext.new, 2 => StreamContext.new }
+    let(:streams_ctx) do
+      streams_ctx = StreamsContext.new
+      streams_ctx.new_context(1)
+      streams_ctx.new_context(2)
+      streams_ctx
     end
     it 'should handle' do
-      expect { Connection.handle_stream_window_update(window_update, stream_ctxs) }.not_to raise_error
-      expect(stream_ctxs[1].send_window.length).to eq 2**16 - 1 + 1000
-      expect(stream_ctxs[2].send_window.length).to eq 2**16 - 1
+      expect { Connection.handle_stream_window_update(window_update, streams_ctx) }.not_to raise_error
+      expect(streams_ctx[1].send_window.length).to eq 2**16 - 1 + 1000
+      expect(streams_ctx[2].send_window.length).to eq 2**16 - 1
     end
   end
 end

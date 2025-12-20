@@ -8,13 +8,17 @@ RSpec.describe DataBuffer do
     let(:send_window1) do
       Window.new
     end
-    let(:stream_ctxs1) do
-      { 1 => StreamContext.new, 2 => StreamContext.new }
+    let(:streams_ctx1) do
+      streams_ctx = StreamsContext.new
+      streams_ctx.new_context(1)
+      streams_ctx.new_context(2)
+      streams_ctx
     end
     it 'should take' do
-      expect(data_buffer1.take!(send_window1, stream_ctxs1).length).to eq 0
+      expect(data_buffer1.take!(send_window1, streams_ctx1).length).to eq 0
       expect(send_window1.length).to eq 2**16 - 1
-      expect(stream_ctxs1.values.map(&:send_window).map(&:length)).to eq [2**16 - 1, 2**16 - 1]
+      expect(streams_ctx1[1].send_window.length).to eq 2**16 - 1
+      expect(streams_ctx1[2].send_window.length).to eq 2**16 - 1
     end
 
     let(:data_buffer2) do
@@ -26,16 +30,20 @@ RSpec.describe DataBuffer do
     let(:send_window2) do
       Window.new
     end
-    let(:stream_ctxs2) do
-      { 1 => StreamContext.new, 2 => StreamContext.new }
+    let(:streams_ctx2) do
+      streams_ctx = StreamsContext.new
+      streams_ctx.new_context(1)
+      streams_ctx.new_context(2)
+      streams_ctx
     end
     it 'should take' do
-      datas = data_buffer2.take!(send_window2, stream_ctxs2)
+      datas = data_buffer2.take!(send_window2, streams_ctx2)
       expect(datas.length).to eq 2
       expect(datas.map(&:stream_id)).to eq [1, 2]
       expect(datas.map(&:data)).to eq %w[one two]
       expect(send_window2.length).to eq 2**16 - 7
-      expect(stream_ctxs2.values.map(&:send_window).map(&:length)).to eq [2**16 - 4, 2**16 - 4]
+      expect(streams_ctx2[1].send_window.length).to eq 2**16 - 4
+      expect(streams_ctx2[2].send_window.length).to eq 2**16 - 4
     end
 
     let(:data_buffer3) do
@@ -46,16 +54,20 @@ RSpec.describe DataBuffer do
     let(:send_window3) do
       Window.new
     end
-    let(:stream_ctxs3) do
-      { 1 => StreamContext.new, 2 => StreamContext.new }
+    let(:streams_ctx3) do
+      streams_ctx = StreamsContext.new
+      streams_ctx.new_context(1)
+      streams_ctx.new_context(2)
+      streams_ctx
     end
     it 'should take' do
-      datas = data_buffer3.take!(send_window3, stream_ctxs3)
+      datas = data_buffer3.take!(send_window3, streams_ctx3)
       expect(datas.length).to eq 1
       expect(datas.first.stream_id).to eq 2
       expect(datas.first.data).to eq 'two'
       expect(send_window3.length).to eq 2**16 - 4
-      expect(stream_ctxs3.values.map(&:send_window).map(&:length)).to eq [2**16 - 1, 2**16 - 4]
+      expect(streams_ctx3[1].send_window.length).to eq 2**16 - 1
+      expect(streams_ctx3[2].send_window.length).to eq 2**16 - 4
     end
 
     let(:data_buffer4) do
@@ -67,18 +79,21 @@ RSpec.describe DataBuffer do
     let(:send_window4) do
       Window.new
     end
-    let(:stream_ctxs4) do
-      stream_ctxs = { 1 => StreamContext.new, 2 => StreamContext.new }
-      stream_ctxs[1].send_window.consume!(2**16 - 1)
-      stream_ctxs
+    let(:streams_ctx4) do
+      streams_ctx = StreamsContext.new
+      streams_ctx.new_context(1)
+      streams_ctx[1].send_window.consume!(2**16 - 1)
+      streams_ctx.new_context(2)
+      streams_ctx
     end
     it 'should take' do
-      datas = data_buffer4.take!(send_window4, stream_ctxs4)
+      datas = data_buffer4.take!(send_window4, streams_ctx4)
       expect(datas.length).to eq 1
       expect(datas.first.stream_id).to eq 2
       expect(datas.first.data).to eq 'two'
       expect(send_window4.length).to eq 2**16 - 4
-      expect(stream_ctxs4.values.map(&:send_window).map(&:length)).to eq [0, 2**16 - 4]
+      expect(streams_ctx4[1].send_window.length).to eq 0
+      expect(streams_ctx4[2].send_window.length).to eq 2**16 - 4
     end
 
     let(:data_buffer5) do
@@ -92,13 +107,17 @@ RSpec.describe DataBuffer do
       send_window.consume!(2**16 - 1)
       send_window
     end
-    let(:stream_ctxs5) do
-      { 1 => StreamContext.new, 2 => StreamContext.new }
+    let(:streams_ctx5) do
+      streams_ctx = StreamsContext.new
+      streams_ctx.new_context(1)
+      streams_ctx.new_context(2)
+      streams_ctx
     end
     it 'should take' do
-      expect(data_buffer5.take!(send_window5, stream_ctxs5).length).to eq 0
+      expect(data_buffer5.take!(send_window5, streams_ctx5).length).to eq 0
       expect(send_window5.length).to eq 0
-      expect(stream_ctxs5.values.map(&:send_window).map(&:length)).to eq [2**16 - 1, 2**16 - 1]
+      expect(streams_ctx5[1].send_window.length).to eq 2**16 - 1
+      expect(streams_ctx5[2].send_window.length).to eq 2**16 - 1
     end
   end
 

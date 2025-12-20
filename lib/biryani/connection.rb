@@ -21,7 +21,7 @@ module Biryani
     def initialize
       @sock = nil # Ractor
       @max_streams = 0xffffffff
-      @stream_ctxs = {} # Hash<Integer, StreamContext>
+      @streams_ctx = StreamsContext.new
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
       @send_window = Window.new
@@ -36,7 +36,7 @@ module Biryani
     def serve(io)
       err = self.class.read_http2_magic(io)
       unless err.nil?
-        self.class.do_send(io, err.goaway(last_stream_id), true)
+        self.class.do_send(io, err.goaway(@streams_ctx.last_stream_id), true)
         return
       end
 
@@ -45,9 +45,9 @@ module Biryani
       recv_loop(io.clone)
       send_loop(io)
     rescue StandardError
-      self.class.do_send(io, Frame::Goaway.new(0, last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
+      self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
-      self.class.close_all_streams(@stream_ctxs)
+      self.class.close_all_streams(@streams_ctx)
       io&.close
     end
 
@@ -69,23 +69,23 @@ module Biryani
     # rubocop: disable Metrics/PerceivedComplexity
     def send_loop(io)
       loop do
-        ports = @stream_ctxs.values.filter { |ctx| !ctx.closed? }.map(&:tx) + @stream_ctxs.values.map(&:err)
+        ports = @streams_ctx.txs + @streams_ctx.errs
         ports << @sock
         break if ports.empty?
 
         port_, obj = Ractor.select(*ports)
         if port_ == @sock
           recv_dispatch(obj).each do |recv_frame|
-            reply_frame = self.class.ensure_frame(recv_frame, last_stream_id)
+            reply_frame = self.class.ensure_frame(recv_frame, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
-            close if self.class.transition_state(reply_frame, @stream_ctxs)
+            close if self.class.transition_state(reply_frame, @streams_ctx)
           end
         else
-          send_frame = self.class.ensure_frame(obj, last_stream_id)
+          send_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
-          close if self.class.send(io, send_frame, @send_window, @stream_ctxs, @data_buffer)
+          close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
 
-          self.class.delete_streams(@stream_ctxs, @data_buffer)
+          self.class.delete_streams(@streams_ctx, @data_buffer)
         end
 
         break if closed?
@@ -134,7 +134,7 @@ module Biryani
         err = self.class.handle_connection_window_update(frame, @send_window)
         return [err] unless err.nil?
 
-        @data_buffer.take!(@send_window, @stream_ctxs)
+        @data_buffer.take!(@send_window, @streams_ctx)
       else
         # ignore unknown frame type
         []
@@ -145,7 +145,6 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
-    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
@@ -159,41 +158,30 @@ module Biryani
         return [obj] if obj.is_a?(ConnectionError)
 
         frame = obj
-        ctx = @stream_ctxs[stream_id]
-        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @stream_ctxs.values.filter(&:active?).length + 1 > @max_streams
+        ctx = @streams_ctx[stream_id]
+        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
 
-        if ctx.nil?
-          ctx = StreamContext.new
-          @stream_ctxs[stream_id] = ctx
-        end
-
-        stream = ctx.stream
-        stream.rx << frame
+        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
+        ctx.stream.rx << frame
         ctx.state.transition!(frame, :recv)
         []
       when FrameType::PUSH_PROMISE
         # TODO
       when FrameType::RST_STREAM
-        self.class.handle_rst_stream(frame, @stream_ctxs)
+        self.class.handle_rst_stream(frame, @streams_ctx)
         []
       when FrameType::WINDOW_UPDATE
-        err = self.class.handle_stream_window_update(frame, @stream_ctxs)
+        err = self.class.handle_stream_window_update(frame, @streams_ctx)
         return [err] unless err.nil?
 
-        @data_buffer.take!(@send_window, @stream_ctxs)
+        @data_buffer.take!(@send_window, @streams_ctx)
       else
         # ignore unknown frame type
         []
       end
     end
-    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
-
-    # @return [Integer]
-    def last_stream_id
-      @stream_ctxs.keys.max || 0
-    end
 
     def close
       @closed = true
@@ -220,54 +208,53 @@ module Biryani
     end
 
     # @param send_frame [Frame]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param streams_ctx [StreamsContext]
     #
     # @return [Boolean] should close connection?
-    def self.transition_state(send_frame, stream_ctxs)
+    def self.transition_state(send_frame, streams_ctx)
       stream_id = send_frame.stream_id
       typ = send_frame.f_type
-      stream_ctxs[stream_id].state.transition!(send_frame, :send) unless stream_id.zero?
+      streams_ctx[stream_id].state.transition!(send_frame, :send) unless stream_id.zero?
       if typ == FrameType::GOAWAY
-        close_all_streams(stream_ctxs)
+        close_all_streams(streams_ctx)
         return true
       end
 
       if typ == FrameType::RST_STREAM
-        stream_ctxs[stream_id].state.close
-        close_stream(stream_id, stream_ctxs)
+        streams_ctx[stream_id].state.close
+        close_stream(stream_id, streams_ctx)
       end
 
       false
     end
 
     # @param id [Integer] stream_id
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
-    def self.close_stream(id, stream_ctxs)
-      ctx = stream_ctxs[id]
-      ctx.stream.rx.close_incoming
-      ctx.tx.close_incoming
-      ctx.err.close_incoming
+    # @param streams_ctx [StreamsContext]
+    def self.close_stream(id, streams_ctx)
+      streams_ctx[id].stream.rx.close_incoming
+      streams_ctx[id].tx.close_incoming
+      streams_ctx[id].err.close_incoming
     end
 
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
-    def self.close_all_streams(stream_ctxs)
-      stream_ctxs.each_value do |ctx|
+    # @param streams_ctx [StreamsContext]
+    def self.close_all_streams(streams_ctx)
+      streams_ctx.each do |ctx|
         ctx.stream.rx.close_incoming
         ctx.tx.close_incoming
         ctx.err.close_incoming
       end
     end
 
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
-    def self.delete_streams(stream_ctxs, data_buffer)
-      closed_ids = stream_ctxs.filter { |_, ctx| ctx.closed? }.keys
+    def self.delete_streams(streams_ctx, data_buffer)
+      closed_ids = streams_ctx.closed_stream_ids
       closed_ids.filter! { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
-        stream_ctxs[id].stream.rx.close_incoming
-        stream_ctxs[id].tx.close_incoming
-        stream_ctxs[id].err.close_incoming
-        stream_ctxs.delete(id)
+        streams_ctx[id].stream.rx.close_incoming
+        streams_ctx[id].tx.close_incoming
+        streams_ctx[id].err.close_incoming
+        streams_ctx.delete(id)
       end
     end
 
@@ -282,21 +269,21 @@ module Biryani
     # @param io [IO]
     # @param frame [Object]
     # @param send_window [Window]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
     #
     # @return [Boolean] should close connection?
-    def self.send(io, frame, send_window, stream_ctxs, data_buffer)
+    def self.send(io, frame, send_window, streams_ctx, data_buffer)
       if frame.f_type != FrameType::DATA
         do_send(io, frame, false)
-        return transition_state(frame, stream_ctxs)
+        return transition_state(frame, streams_ctx)
       end
 
       data = frame
-      if sendable?(data, send_window, stream_ctxs)
+      if sendable?(data, send_window, streams_ctx)
         do_send(io, data, false)
         send_window.consume!(data.length)
-        stream_ctxs[data.stream_id].send_window.consume!(data.length)
+        streams_ctx[data.stream_id].send_window.consume!(data.length)
         return false
       end
 
@@ -306,13 +293,13 @@ module Biryani
 
     # @param data [Data]
     # @param send_window [Window]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param streams_ctx [StreamsContext]
     #
     # @return [Boolean]
-    def self.sendable?(data, send_window, stream_ctxs)
+    def self.sendable?(data, send_window, streams_ctx)
       length = data.length
       stream_id = data.stream_id
-      send_window.available?(length) && stream_ctxs[stream_id].send_window.available?(length)
+      send_window.available?(length) && streams_ctx[stream_id].send_window.available?(length)
     end
 
     # @param io [IO]
@@ -324,10 +311,10 @@ module Biryani
     end
 
     # @param rst_stream [RstStream]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
-    def self.handle_rst_stream(rst_stream, stream_ctxs)
+    # @param streams_ctx [StreamsContext]
+    def self.handle_rst_stream(rst_stream, streams_ctx)
       stream_id = rst_stream.stream_id
-      stream_ctxs[stream_id].state.close
+      streams_ctx[stream_id].state.close
     end
 
     # @param settings [Settings]
@@ -371,15 +358,15 @@ module Biryani
     end
 
     # @param window_update [WindowUpdate]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param streams_ctx [StreamsContext]
     #
     # @return [nil, ConnectionError]
-    def self.handle_stream_window_update(window_update, stream_ctxs)
+    def self.handle_stream_window_update(window_update, streams_ctx)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'WINDOW_UPDATE invalid window size increment 0') if window_update.window_size_increment.zero?
       return StreamError.new(ErrorCode::FLOW_CONTROL_ERROR, window_update.stream_id, 'WINDOW_UPDATE invalid window size increment greater than 2^31-1') \
         if window_update.window_size_increment > 2**31 - 1
 
-      stream_ctxs[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
+      streams_ctx[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
       nil
     end
 
