@@ -129,15 +129,18 @@ module Biryani
     Ractor.make_shareable(FRAME_MAP)
 
     # @param io [IO]
+    # @param max_frame_size [Integer]
     #
     # @return [Object, ConnectionError, nil] frame or error
-    def self.read(io)
+    def self.read(io, max_frame_size)
       s = io.read(9)
       return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid header length') if s.length != 9
 
       payload_length, f_type, flags, stream_id = read_header(s)
       payload = io.read(payload_length)
-      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid payload length') if payload.length != payload_length
+
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid payload length') if payload.length != payload_length
+      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE') if payload.length > max_frame_size
       return Frame::Unknown.new(f_type, flags, stream_id, payload) unless FRAME_MAP.key?(f_type)
 
       FRAME_MAP[f_type].read(s + payload)

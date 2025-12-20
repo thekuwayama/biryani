@@ -21,6 +21,7 @@ module Biryani
     def initialize
       @sock = nil # Ractor
       @max_streams = 0xffffffff
+      @max_frame_size = 16_384
       @streams_ctx = StreamsContext.new
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
@@ -53,9 +54,9 @@ module Biryani
 
     # @param io [IO]
     def recv_loop(io)
-      Ractor.new(io, @sock = port) do |io_, sock_|
+      Ractor.new(io, @sock = port, @max_frame_size) do |io_, sock_, max_frame_size|
         loop do
-          obj = Frame.read(io_)
+          obj = Frame.read(io_, max_frame_size)
           break if obj.nil?
 
           sock_ << obj
@@ -116,10 +117,10 @@ module Biryani
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
-        pair = self.class.handle_settings(frame, @send_settings, @decoder)
-        return [] if pair.nil?
+        tuple = self.class.handle_settings(frame, @send_settings, @decoder)
+        return [] if tuple.nil?
 
-        settings_ack, @max_streams = pair
+        settings_ack, @max_streams, @max_frame_size = tuple
         [settings_ack]
       when FrameType::PING
         obj = self.class.handle_ping(frame)
@@ -329,12 +330,17 @@ module Biryani
     #
     # @return [Settings, nil]
     # @return [Integer]
+    # @return [Integer]
     def self.handle_settings(settings, send_settings, decoder)
       return nil if settings.ack?
 
       send_settings.merge!(settings.setting.to_h)
       decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
-      [Frame::Settings.new(true, []), send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]]
+      [
+        Frame::Settings.new(true, []),
+        send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS],
+        send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+      ]
     end
 
     # @param ping [Ping]

@@ -13,7 +13,8 @@ RSpec.describe Connection do
       Frame::Settings.new(false, [[SettingsID::SETTINGS_HEADER_TABLE_SIZE, 8192]])
     end
     it 'should handle' do
-      expect(Connection.handle_settings(settings1, send_settings, decoder)).to_not eq [nil, 0xffffffff]
+      expect(Connection.handle_settings(settings1, send_settings, decoder)[1]).to eq 0xffffffff
+      expect(Connection.handle_settings(settings1, send_settings, decoder)[2]).to eq 16_384
       expect(Connection.handle_settings(settings1, send_settings, decoder).first.ack?).to eq true
       expect(Connection.handle_settings(settings1, send_settings, decoder).first.setting).to eq []
       expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 8192
