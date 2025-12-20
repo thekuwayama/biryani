@@ -19,7 +19,7 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
     def initialize
-      @rx = nil
+      @sock = nil # Ractor
       @max_streams = 0xffffffff
       @stream_ctxs = {} # Hash<Integer, StreamContext>
       @encoder = HPACK::Encoder.new(4_096)
@@ -53,12 +53,12 @@ module Biryani
 
     # @param io [IO]
     def recv_loop(io)
-      Ractor.new(io, @rx = port) do |io_, rx_|
+      Ractor.new(io, @sock = port) do |io_, sock_|
         loop do
           obj = Frame.read(io_)
           break if obj.nil?
 
-          rx_ << obj
+          sock_ << obj
         end
       end
     end
@@ -70,11 +70,11 @@ module Biryani
     def send_loop(io)
       loop do
         ports = @stream_ctxs.values.filter { |ctx| !ctx.closed? }.map(&:tx) + @stream_ctxs.values.map(&:err)
-        ports << @rx
+        ports << @sock
         break if ports.empty?
 
         port_, obj = Ractor.select(*ports)
-        if port_ == @rx
+        if port_ == @sock
           recv_dispatch(obj).each do |recv_frame|
             reply_frame = self.class.ensure_frame(recv_frame, last_stream_id)
             self.class.do_send(io, reply_frame, true)
