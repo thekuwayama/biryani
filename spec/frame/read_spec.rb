@@ -6,7 +6,7 @@ RSpec.describe Frame do
       StringIO.new(''.b)
     end
     it 'should not read' do
-      expect(Frame.read(empty)).to be_kind_of ConnectionError
+      expect(Frame.read(empty)).to eq nil
     end
 
     let(:invalid_header) do

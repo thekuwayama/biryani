@@ -130,15 +130,17 @@ module Biryani
 
     # @param io [IO]
     #
-    # @return [Object] frame
+    # @return [Object, ConnectionError, nil] frame or error
     def self.read(io)
-      s = io.read(4)
-      len = s.unpack1('N') >> 8 # shift right8 uint32 to get uint24
-      typ = s[3].unpack1('C')
+      s = io.read(9)
+      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid header length') if s.length != 9
 
-      return Frame::Unknown.read(s + io.read(len + 5)) unless FRAME_MAP.key?(typ)
+      payload_length, f_type, flags, stream_id = read_header(s)
+      payload = io.read(payload_length)
+      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid payload length') if payload.length != payload_length
+      return Frame::Unknown.new(f_type, flags, stream_id, payload) unless FRAME_MAP.key?(f_type)
 
-      FRAME_MAP[typ].read(s + io.read(len + 5))
+      FRAME_MAP[f_type].read(s + payload)
     rescue Error::FrameReadError
       ConnectionError.new(ErrorCode::INTERNAL_ERROR, 'internal error') # TODO: handle each error
     rescue StandardError
