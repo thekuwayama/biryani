@@ -11,9 +11,14 @@ module Biryani
         @window_size_increment = window_size_increment
       end
 
+      # @return [Integer]
+      def length
+        4
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = 4
+        payload_length = length
         flags = 0x00
 
         Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + [@window_size_increment].pack('N')

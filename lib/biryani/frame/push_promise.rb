@@ -27,9 +27,14 @@ module Biryani
         @end_headers
       end
 
+      # @return [Integer]
+      def length
+        @fragment.bytesize + 4 + (padded? ? 1 + @padding.bytesize : 0)
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = @fragment.bytesize + 4 + (padded? ? 1 + @padding.bytesize : 0)
+        payload_length = length
         flags = Frame.to_flags(padded: padded?, end_headers: end_headers?)
         pad_length = padded? ? @padding.bytesize.chr : ''
         padding = @padding || ''

@@ -43,9 +43,14 @@ module Biryani
         @end_stream
       end
 
+      # @return [Integer]
+      def length
+        @fragment.bytesize + (padded? ? 1 + @padding.bytesize : 0) + (priority? ? 5 : 0)
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = @fragment.bytesize + (padded? ? 1 + @padding.bytesize : 0) + (priority? ? 5 : 0)
+        payload_length = length
         flags = Frame.to_flags(priority: priority?, padded: padded?, end_headers: end_headers?, end_stream: end_stream?)
         pad_length = padded? ? @padding.bytesize.chr : ''
         stream_dependency_weight = priority? ? [@stream_dependency, @weight].pack('NC') : ''

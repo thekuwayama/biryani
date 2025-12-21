@@ -13,9 +13,14 @@ module Biryani
         @weight = weight
       end
 
+      # @return [Integer]
+      def length
+        5
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = 5
+        payload_length = length
         flags = 0x00
 
         Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + [@stream_dependency, @weight].pack('NC')

@@ -18,9 +18,14 @@ module Biryani
         @ack
       end
 
+      # @return [Integer]
+      def length
+        8
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = 8
+        payload_length = length
         flags = Frame.to_flags(ack: ack?)
 
         Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + opaque

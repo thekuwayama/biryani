@@ -18,9 +18,14 @@ module Biryani
         @end_headers
       end
 
+      # @return [Integer]
+      def length
+        @fragment.bytesize
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = @fragment.bytesize
+        payload_length = length
         flags = Frame.to_flags(end_headers: end_headers?)
 
         Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + @fragment

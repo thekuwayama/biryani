@@ -54,9 +54,9 @@ module Biryani
 
     # @param io [IO]
     def recv_loop(io)
-      Ractor.new(io, @sock = port, @max_frame_size) do |io_, sock_, max_frame_size|
+      Ractor.new(io, @sock = port) do |io_, sock_|
         loop do
-          obj = Frame.read(io_, max_frame_size)
+          obj = Frame.read(io_)
           break if obj.nil?
 
           sock_ << obj
@@ -66,6 +66,7 @@ module Biryani
 
     # @param io [IO]
     # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/BlockLength
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def send_loop(io)
@@ -74,15 +75,25 @@ module Biryani
         ports << @sock
         break if ports.empty?
 
-        port_, obj_ = Ractor.select(*ports)
+        port_, obj = Ractor.select(*ports)
         if port_ == @sock
-          recv_dispatch(obj_).each do |obj|
-            reply_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+          obj = ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE') \
+            if !obj.is_a?(ConnectionError) && obj.length > @max_frame_size
+
+          frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+          if frame.f_type == FrameType::GOAWAY
+            reply_frame = frame
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state(reply_frame, @streams_ctx)
+          else
+            recv_dispatch(frame).each do |obj|
+              reply_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+              self.class.do_send(io, reply_frame, true)
+              close if self.class.transition_state(reply_frame, @streams_ctx)
+            end
           end
         else
-          send_frame = self.class.ensure_frame(obj_, @streams_ctx.last_stream_id)
+          send_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
           close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
 
@@ -93,6 +104,7 @@ module Biryani
       end
     end
     # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/BlockLength
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
@@ -339,7 +351,8 @@ module Biryani
       ack = settings.ack?
       setting = settings.setting
 
-      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'ack SETTINGS invalid setting') if ack && setting.any?
+      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'ack SETTINGS invalid setting') \
+        if ack && setting.any?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_ENABLE_PUSH') \
         if !setting[SettingsID::SETTINGS_ENABLE_PUSH].nil? && ![0, 1].include?(setting[SettingsID::SETTINGS_ENABLE_PUSH])
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \

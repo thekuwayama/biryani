@@ -18,9 +18,14 @@ module Biryani
         @ack
       end
 
+      # @return [Integer]
+      def length
+        @setting.length * 6
+      end
+
       # @return [String]
       def to_binary_s
-        payload_length = setting.length * 6
+        payload_length = length
         flags = Frame.to_flags(ack: ack?)
         setting = @setting.map { |x| x.pack('nN') }.join
 

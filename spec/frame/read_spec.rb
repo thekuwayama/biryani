@@ -6,21 +6,21 @@ RSpec.describe Frame do
       StringIO.new(''.b)
     end
     it 'should not read' do
-      expect(Frame.read(empty, 16_384)).to eq nil
+      expect(Frame.read(empty)).to eq nil
     end
 
     let(:invalid_header) do
       StringIO.new("\x12\x34\x56\x00\x00".b)
     end
     it 'should not read' do
-      expect(Frame.read(invalid_header, 16_384)).to be_kind_of ConnectionError
+      expect(Frame.read(invalid_header)).to be_kind_of ConnectionError
     end
 
     let(:unknown) do
       StringIO.new("\x00\x00\x01\x0a\x01\x00\x00\x00\x01\xff".b)
     end
     it 'should read' do
-      frame = Frame.read(unknown, 16_384)
+      frame = Frame.read(unknown)
       expect(frame.f_type).to eq 0x0a
       expect(frame.flags).to eq 0x01
       expect(frame.stream_id).to eq 0x01
