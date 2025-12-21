@@ -10,18 +10,19 @@ RSpec.describe Connection do
     end
 
     let(:settings1) do
-      Frame::Settings.new(false, [[SettingsID::SETTINGS_HEADER_TABLE_SIZE, 8192]])
+      Frame::Settings.new(false, 0, { SettingsID::SETTINGS_HEADER_TABLE_SIZE => 8_192 })
     end
     it 'should handle' do
-      expect(Connection.handle_settings(settings1, send_settings, decoder)[1]).to eq 0xffffffff
-      expect(Connection.handle_settings(settings1, send_settings, decoder)[2]).to eq 16_384
-      expect(Connection.handle_settings(settings1, send_settings, decoder).first.ack?).to eq true
-      expect(Connection.handle_settings(settings1, send_settings, decoder).first.setting).to eq []
-      expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 8192
+      tuple = Connection.handle_settings(settings1, send_settings, decoder)
+      expect(tuple[0].ack?).to eq true
+      expect(tuple[0].setting.empty?).to eq true
+      expect(tuple[1]).to eq 0xffffffff
+      expect(tuple[2]).to eq 16_384
+      expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 8_192
     end
 
     let(:settings2) do
-      Frame::Settings.new(true, [])
+      Frame::Settings.new(true, 0, {})
     end
     it 'should handle' do
       expect(Connection.handle_settings(settings2, send_settings, decoder)).to eq nil

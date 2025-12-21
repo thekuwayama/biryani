@@ -4,11 +4,12 @@ module Biryani
       attr_reader :f_type, :stream_id, :setting
 
       # @param ack [Boolean]
-      # @param setting [Array] [[uint16, uint32], ...]
-      def initialize(ack, setting)
+      # @param stream_id [Integer]
+      # @param setting [Hash<Integer, Integer>] uint16 uint32
+      def initialize(ack, stream_id, setting)
         @f_type = FrameType::SETTINGS
         @ack = ack
-        @stream_id = 0
+        @stream_id = stream_id
         @setting = setting
       end
 
@@ -30,11 +31,13 @@ module Biryani
       #
       # @return [Settings]
       def self.read(s)
-        _, _, flags, = Frame.read_header(s)
-        ack = Frame.read_ack(flags)
-        setting = s[9..].unpack('nN' * (s[9..].bytesize / 6)).each_slice(2).to_a
+        payload_length, _, flags, stream_id = Frame.read_header(s)
+        raise Error::FrameReadError if payload_length % 6 != 0
 
-        Settings.new(ack, setting)
+        ack = Frame.read_ack(flags)
+        setting = s[9..].unpack('nN' * (payload_length / 6)).each_slice(2).to_h
+
+        Settings.new(ack, stream_id, setting)
       end
     end
   end

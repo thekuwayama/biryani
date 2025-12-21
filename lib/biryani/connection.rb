@@ -41,7 +41,7 @@ module Biryani
         return
       end
 
-      self.class.do_send(io, Frame::Settings.new(false, []), true)
+      self.class.do_send(io, Frame::Settings.new(false, 0, {}), true)
 
       recv_loop(io.clone)
       send_loop(io)
@@ -74,15 +74,15 @@ module Biryani
         ports << @sock
         break if ports.empty?
 
-        port_, obj = Ractor.select(*ports)
+        port_, obj_ = Ractor.select(*ports)
         if port_ == @sock
-          recv_dispatch(obj).each do |recv_frame|
-            reply_frame = self.class.ensure_frame(recv_frame, @streams_ctx.last_stream_id)
+          recv_dispatch(obj_).each do |obj|
+            reply_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state(reply_frame, @streams_ctx)
           end
         else
-          send_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+          send_frame = self.class.ensure_frame(obj_, @streams_ctx.last_stream_id)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
           close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
 
@@ -117,10 +117,11 @@ module Biryani
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
-        tuple = self.class.handle_settings(frame, @send_settings, @decoder)
-        return [] if tuple.nil?
+        obj = self.class.handle_settings(frame, @send_settings, @decoder)
+        return [] if obj.nil?
+        return [obj] if obj.is_a?(ConnectionError)
 
-        settings_ack, @max_streams, @max_frame_size = tuple
+        settings_ack, @max_streams, @max_frame_size = obj
         [settings_ack]
       when FrameType::PING
         obj = self.class.handle_ping(frame)
@@ -328,20 +329,38 @@ module Biryani
     # @param send_settings [Hash<Integer, Integer>]
     # @param decoder [Decoder]
     #
-    # @return [Settings, nil]
-    # @return [Integer]
-    # @return [Integer]
+    # @return [Settings]
+    # @return [Integer] max_streams
+    # @return [Integer] max_frame_size
+    # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/PerceivedComplexity
     def self.handle_settings(settings, send_settings, decoder)
-      return nil if settings.ack?
+      ack = settings.ack?
+      setting = settings.setting
 
-      send_settings.merge!(settings.setting.to_h)
+      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'ack SETTINGS invalid setting') if ack && setting.any?
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_ENABLE_PUSH') \
+        if !setting[SettingsID::SETTINGS_ENABLE_PUSH].nil? && ![0, 1].include?(setting[SettingsID::SETTINGS_ENABLE_PUSH])
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
+        if !setting[SettingsID::SETTINGS_MAX_FRAME_SIZE].nil? && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] < 16_384
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
+        if !setting[SettingsID::SETTINGS_MAX_FRAME_SIZE].nil? && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] > 16_777_215
+      return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'invalid SETTINGS_INITIAL_WINDOW_SIZE') \
+        if !setting[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE].nil? && setting[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE] > 2_147_483_647
+      return nil if ack
+
+      send_settings.merge!(setting)
       decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
       [
-        Frame::Settings.new(true, []),
+        Frame::Settings.new(true, 0, {}),
         send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS],
         send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
       ]
     end
+    # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param ping [Ping]
     #

@@ -145,7 +145,7 @@ module Biryani
 
       FRAME_MAP[f_type].read(s + payload)
     rescue Error::FrameReadError
-      ConnectionError.new(ErrorCode::INTERNAL_ERROR, 'internal error') # TODO: handle each error
+      ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') # TODO: handle each error
     rescue StandardError
       # closed
       nil
