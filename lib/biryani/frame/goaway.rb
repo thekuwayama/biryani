@@ -31,9 +31,10 @@ module Biryani
       #
       # @return [Goaway]
       def self.read(s)
-        _, _, _, stream_id = Frame.read_header(s)
+        payload_length, _, _, stream_id = Frame.read_header(s)
         last_stream_id, error_code = s[9..16].unpack('NN')
         debug = s[17..]
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if debug.bytesize + 8 != payload_length
 
         Goaway.new(stream_id, last_stream_id, error_code, debug)
       end

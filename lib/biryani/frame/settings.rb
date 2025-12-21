@@ -35,15 +35,27 @@ module Biryani
       # @param s [String]
       #
       # @return [Settings]
+      # rubocop: disable Metrics/CyclomaticComplexity
+      # rubocop: disable Metrics/PerceivedComplexity
       def self.read(s)
         payload_length, _, flags, stream_id = Frame.read_header(s)
-        raise Error::FrameReadError if payload_length % 6 != 0
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if payload_length % 6 != 0
 
         ack = Frame.read_ack(flags)
         setting = s[9..].unpack('nN' * (payload_length / 6)).each_slice(2).to_h
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'ack SETTINGS invalid setting') \
+          if ack && setting.any?
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
+          if setting.key?(SettingsID::SETTINGS_MAX_FRAME_SIZE) && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] < 16_384
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
+          if setting.key?(SettingsID::SETTINGS_MAX_FRAME_SIZE) && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] > 16_777_215
+        return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'invalid SETTINGS_INITIAL_WINDOW_SIZE') \
+          if setting.key?(SettingsID::SETTINGS_INITIAL_WINDOW_SIZE) && setting[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE] > 2_147_483_647
 
         Settings.new(ack, stream_id, setting)
       end
+      # rubocop: enable Metrics/CyclomaticComplexity
+      # rubocop: enable Metrics/PerceivedComplexity
     end
   end
 end

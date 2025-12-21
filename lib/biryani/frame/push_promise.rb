@@ -56,9 +56,11 @@ module Biryani
           fragment_length = payload_length - pad_length - 5
           fragment = s[14...14 + fragment_length]
           padding = s[14 + fragment_length..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
           promised_stream_id = s[9..12].unpack1('N')
           fragment = s[13..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize + 4 != payload_length
         end
 
         PushPromise.new(end_headers, stream_id, promised_stream_id, fragment, padding)

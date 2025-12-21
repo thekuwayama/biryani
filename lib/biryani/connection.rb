@@ -81,7 +81,7 @@ module Biryani
             if !obj.is_a?(ConnectionError) && obj.length > @max_frame_size
 
           frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
-          if frame.f_type == FrameType::GOAWAY
+          if [FrameType::GOAWAY, FrameType::RST_STREAM].include?(frame.f_type)
             reply_frame = frame
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state(reply_frame, @streams_ctx)
@@ -344,26 +344,10 @@ module Biryani
     # @return [Settings]
     # @return [Integer] max_streams
     # @return [Integer] max_frame_size
-    # rubocop: disable Metrics/AbcSize
-    # rubocop: disable Metrics/CyclomaticComplexity
-    # rubocop: disable Metrics/PerceivedComplexity
     def self.handle_settings(settings, send_settings, decoder)
-      ack = settings.ack?
-      setting = settings.setting
+      return nil if settings.ack?
 
-      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'ack SETTINGS invalid setting') \
-        if ack && setting.any?
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_ENABLE_PUSH') \
-        if !setting[SettingsID::SETTINGS_ENABLE_PUSH].nil? && ![0, 1].include?(setting[SettingsID::SETTINGS_ENABLE_PUSH])
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
-        if !setting[SettingsID::SETTINGS_MAX_FRAME_SIZE].nil? && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] < 16_384
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
-        if !setting[SettingsID::SETTINGS_MAX_FRAME_SIZE].nil? && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] > 16_777_215
-      return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'invalid SETTINGS_INITIAL_WINDOW_SIZE') \
-        if !setting[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE].nil? && setting[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE] > 2_147_483_647
-      return nil if ack
-
-      send_settings.merge!(setting)
+      send_settings.merge!(settings.setting)
       decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
       [
         Frame::Settings.new(true, 0, {}),
@@ -371,17 +355,11 @@ module Biryani
         send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
       ]
     end
-    # rubocop: enable Metrics/AbcSize
-    # rubocop: enable Metrics/CyclomaticComplexity
-    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param ping [Ping]
     #
     # @return [Ping, nil, ConnectionError]
     def self.handle_ping(ping)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "PING invalid stream identifier #{format('0x%02x', stream_id)}") unless ping.stream_id.zero?
-      return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'PING invalid opaque size') if ping.opaque.bytesize != 8
-
       Frame::Ping.new(true, 0, ping.opaque) unless ping.ack?
     end
 
@@ -393,10 +371,6 @@ module Biryani
     #
     # @return [nil, ConnectionError]
     def self.handle_connection_window_update(window_update, send_window)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'WINDOW_UPDATE invalid window size increment 0') if window_update.window_size_increment.zero?
-      return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'WINDOW_UPDATE invalid window size increment greater than 2^31-1') \
-        if window_update.window_size_increment > 2**31 - 1
-
       send_window.increase!(window_update.window_size_increment)
       nil
     end

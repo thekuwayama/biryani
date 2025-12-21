@@ -13,8 +13,8 @@ RSpec.describe HPACK::Huffman do
     end
 
     it 'should not decode' do
-      expect { HPACK::Huffman.decode("\xff\xff\xff\xff".b) }.to raise_error Error::HuffmanDecodeError
-      expect { HPACK::Huffman.decode("\xf8\xff".b) }.to raise_error Error::HuffmanDecodeError
+      expect { HPACK::Huffman.decode("\xff\xff\xff\xff".b) }.to raise_error HPACK::Error::HuffmanDecodeError
+      expect { HPACK::Huffman.decode("\xf8\xff".b) }.to raise_error HPACK::Error::HuffmanDecodeError
     end
   end
 end

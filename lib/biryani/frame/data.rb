@@ -53,9 +53,11 @@ module Biryani
           data_length = payload_length - pad_length - 1
           data = s[10...10 + data_length]
           padding = s[10 + data_length..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
           data = s[9..]
           padding = nil
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if data.bytesize != payload_length
         end
 
         Data.new(end_stream, stream_id, data, padding)

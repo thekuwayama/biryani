@@ -35,9 +35,10 @@ module Biryani
       #
       # @return [Data]
       def self.read(s)
-        _, _, flags, stream_id = Frame.read_header(s)
+        payload_length, _, flags, stream_id = Frame.read_header(s)
         end_headers = Frame.read_end_headers(flags)
         fragment = s[9..]
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize != payload_length
 
         Continuation.new(end_headers, stream_id, fragment)
       end
@@ -49,7 +50,7 @@ module Biryani
         fields = decoder.decode(@fragment)
 
         RawContinuation.new(@end_headers, @stream_id, fields)
-      rescue Error::HuffmanDecodeError, Error::HPACKDecodeError
+      rescue HPACK::Error::HuffmanDecodeError, HPACK::Error::HPACKDecodeError
         ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
       end
     end

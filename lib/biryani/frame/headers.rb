@@ -63,6 +63,8 @@ module Biryani
       #
       # @return [Headers]
       # rubocop: disable Metrics/AbcSize
+      # rubocop: disable Metrics/CyclomaticComplexity
+      # rubocop: disable Metrics/PerceivedComplexity
       def self.read(s)
         payload_length, _, flags, stream_id = Frame.read_header(s)
         priority = Frame.read_priority(flags)
@@ -77,22 +79,29 @@ module Biryani
           stream_dependency %= 2**31
           fragment = s[15...15 + fragment_length]
           padding = s[15 + fragment_length..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
         elsif priority
           stream_dependency, weight = s[9..13].unpack('NC')
           # exclusive = (stream_dependency / 2**31).positive?
           stream_dependency %= 2**31
           fragment = s[14..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize + 5 != payload_length
         elsif padded
           pad_length = s[9].unpack1('C')
           fragment_length = payload_length - pad_length - 1
           fragment = s[10...10 + fragment_length]
           padding = s[10 + fragment_length..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
           fragment = s[9..]
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize != payload_length
         end
 
         Headers.new(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)
       end
+      # rubocop: enable Metrics/AbcSize
+      # rubocop: enable Metrics/CyclomaticComplexity
+      # rubocop: enable Metrics/PerceivedComplexity
 
       # @param decoder [Decoder]
       #
@@ -101,10 +110,9 @@ module Biryani
         fields = decoder.decode(@fragment)
 
         RawHeaders.new(@end_headers, @end_stream, @stream_id, @stream_dependency, @weight, fields, @padding)
-      rescue Error::HuffmanDecodeError, Error::HPACKDecodeError
+      rescue HPACK::Error::HuffmanDecodeError, HPACK::Error::HPACKDecodeError
         ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
       end
-      # rubocop: enable Metrics/AbcSize
     end
   end
 end

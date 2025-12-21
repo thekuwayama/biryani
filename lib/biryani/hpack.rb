@@ -75,6 +75,7 @@ end
 require_relative 'hpack/decoder'
 require_relative 'hpack/dynamic_table'
 require_relative 'hpack/encoder'
+require_relative 'hpack/error'
 require_relative 'hpack/field'
 require_relative 'hpack/fields'
 require_relative 'hpack/huffman'
