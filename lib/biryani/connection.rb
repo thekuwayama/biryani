@@ -49,7 +49,7 @@ module Biryani
       self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
       self.class.close_all_streams(@streams_ctx)
-      io&.close
+      io&.close_write
     end
 
     # @param io [IO]
@@ -77,17 +77,18 @@ module Biryani
 
         port_, obj = Ractor.select(*ports)
         if port_ == @sock
-          obj = ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE') \
-            if !obj.is_a?(ConnectionError) && obj.length > @max_frame_size
-
-          frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
-          if [FrameType::GOAWAY, FrameType::RST_STREAM].include?(frame.f_type)
-            reply_frame = frame
+          if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
+            reply_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state(reply_frame, @streams_ctx)
+          elsif obj.length > @max_frame_size
+            self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
+            close
+          elsif [FrameType::GOAWAY, FrameType::RST_STREAM].include?(obj.f_type)
+            close if self.class.transition_state(obj, @streams_ctx)
           else
-            recv_dispatch(frame).each do |obj|
-              reply_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+            recv_dispatch(obj).each do |frame|
+              reply_frame = self.class.ensure_frame(frame, @streams_ctx.last_stream_id)
               self.class.do_send(io, reply_frame, true)
               close if self.class.transition_state(reply_frame, @streams_ctx)
             end
