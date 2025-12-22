@@ -30,7 +30,10 @@ module Biryani
       #
       # @return [Priority]
       def self.read(s)
-        _, _, _, stream_id = Frame.read_header(s)
+        payload_length, _, _, stream_id = Frame.read_header(s)
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'PRIORITY payload length MUST be 5') if payload_length != 5
+
         stream_dependency, weight = s[9..13].unpack('NC')
         stream_dependency %= 2**31
 

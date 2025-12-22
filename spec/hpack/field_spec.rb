@@ -35,8 +35,8 @@ RSpec.describe HPACK::Field do
     end
 
     it 'should not decode' do
-      expect { HPACK::Field.decode("\xbe".b, cursor, dynamic_table) }.to raise_error Error::HPACKDecodeError
-      expect { HPACK::Field.decode("\x3f\xe2\x1f".b, cursor, dynamic_table) }.to raise_error Error::HPACKDecodeError
+      expect { HPACK::Field.decode("\xbe".b, cursor, dynamic_table) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { HPACK::Field.decode("\x3f\xe2\x1f".b, cursor, dynamic_table) }.to raise_error HPACK::Error::HPACKDecodeError
     end
   end
 end

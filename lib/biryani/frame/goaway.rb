@@ -31,7 +31,9 @@ module Biryani
       #
       # @return [Goaway]
       def self.read(s)
-        _, _, _, stream_id = Frame.read_header(s)
+        payload_length, _, _, stream_id = Frame.read_header(s)
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
+
         last_stream_id, error_code = s[9..16].unpack('NN')
         debug = s[17..]
 

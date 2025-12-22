@@ -30,9 +30,11 @@ module Biryani
       #
       # @return [Data]
       def self.read(s)
-        _, f_type, flags, stream_id = Frame.read_header(s)
+        payload_length, f_type, flags, stream_id = Frame.read_header(s)
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
 
         payload = s[9..]
+
         Unknown.new(f_type, flags, stream_id, payload)
       end
     end
