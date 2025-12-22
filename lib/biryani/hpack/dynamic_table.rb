@@ -10,6 +10,11 @@ module Biryani
         @limit = limit
       end
 
+      # @return [Integer]
+      def count_entries
+        @table.length
+      end
+
       # @param name [String]
       # @param value [String]
       def store(name, value)
