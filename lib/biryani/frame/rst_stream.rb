@@ -29,7 +29,8 @@ module Biryani
       # @return [RstStream]
       def self.read(s)
         payload_length, _, _, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if s[9..].bytesize != payload_length || s[9..].bytesize != 4
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'RST_STREAM payload length MUST be 4') if s[9..].bytesize != 4
 
         error_code = s[9..].unpack1('N')
         RstStream.new(stream_id, error_code)

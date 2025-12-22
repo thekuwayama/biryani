@@ -67,6 +67,8 @@ module Biryani
       # rubocop: disable Metrics/PerceivedComplexity
       def self.read(s)
         payload_length, _, flags, stream_id = Frame.read_header(s)
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
+
         priority = Frame.read_priority(flags)
         padded = Frame.read_padded(flags)
         end_headers = Frame.read_end_headers(flags)
@@ -91,10 +93,11 @@ module Biryani
           fragment_length = payload_length - pad_length - 1
           fragment = s[10...10 + fragment_length]
           padding = s[10 + fragment_length..]
-          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
+          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= payload_length
+          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
           fragment = s[9..]
-          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize != payload_length
+          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if fragment.bytesize != payload_length
         end
 
         Headers.new(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)
