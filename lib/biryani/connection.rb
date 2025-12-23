@@ -184,7 +184,7 @@ module Biryani
         ctx.state.transition!(frame, :recv)
         []
       when FrameType::PRIORITY
-        # ignore
+        # ignore PRIORITY Frame
         []
       when FrameType::PUSH_PROMISE
         # TODO
@@ -197,7 +197,7 @@ module Biryani
 
         @data_buffer.take!(@send_window, @streams_ctx)
       else
-        # ignore unknown frame type
+        # ignore UNKNOWN Frame
         []
       end
     end
