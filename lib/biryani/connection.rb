@@ -73,7 +73,7 @@ module Biryani
       loop do
         ports = @streams_ctx.txs + @streams_ctx.errs
         ports << @sock
-        break if ports.empty?
+        next if ports.empty?
 
         port_, obj = Ractor.select(*ports)
         if port_ == @sock
