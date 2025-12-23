@@ -52,7 +52,7 @@ module Biryani
         return [h & limit, cursor + 1] if (h & limit) != limit
 
         res = limit
-        s[1..].each_byte.each_with_index.each do |byte, i|
+        s[cursor + 1..].each_byte.each_with_index.each do |byte, i|
           res += (byte & 127) * 2**(i * 7)
           cursor += 1
 

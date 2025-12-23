@@ -115,17 +115,15 @@ module Biryani
         elsif (byte & 0b01000000).positive?
           decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         elsif (byte & 0b00100000).positive?
-          raise Error::HPACKDecodeError unless cursor.zero?
-
           decode_dynamic_table_size_update(s, cursor, dynamic_table)
         elsif byte == 0b00010000
           decode_literal_field_never_indexed(s, cursor)
         elsif (byte & 0b00010000).positive?
-          decode_literal_value_never_indexed(s, cursor)
+          decode_literal_value_never_indexed(s, cursor, dynamic_table)
         elsif byte.zero?
           decode_literal_field_without_indexing(s, cursor)
         elsif (byte & 0b11110000).zero?
-          decode_literal_value_without_indexing(s, cursor)
+          decode_literal_value_without_indexing(s, cursor, dynamic_table)
         else
           raise 'unreachable'
         end
@@ -232,6 +230,8 @@ module Biryani
       # @return [nil]
       # @return [Integer]
       def self.decode_dynamic_table_size_update(s, cursor, dynamic_table)
+        raise Error::HPACKDecodeError unless cursor.zero? || (s.getbyte(0) & 0b00100000).positive? && Integer.decode(s, 5, 0)[1] == cursor
+
         max_size, c = Integer.decode(s, 5, cursor)
         raise Error::HPACKDecodeError if max_size > dynamic_table.limit
 
@@ -277,10 +277,11 @@ module Biryani
       #
       # @param s [String]
       # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_never_indexed(s, cursor)
+      def self.decode_literal_value_never_indexed(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 4, cursor)
         raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
@@ -332,10 +333,11 @@ module Biryani
       #
       # @param s [String]
       # @param cursor [Integer]
+      # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_without_indexing(s, cursor)
+      def self.decode_literal_value_without_indexing(s, cursor, dynamic_table)
         index, c = Integer.decode(s, 4, cursor)
         raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
