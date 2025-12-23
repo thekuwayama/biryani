@@ -115,6 +115,8 @@ module Biryani
         elsif (byte & 0b01000000).positive?
           decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
         elsif (byte & 0b00100000).positive?
+          raise Error::HPACKDecodeError unless cursor.zero?
+
           decode_dynamic_table_size_update(s, cursor, dynamic_table)
         elsif byte == 0b00010000
           decode_literal_field_never_indexed(s, cursor)
