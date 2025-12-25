@@ -4,6 +4,10 @@ module Biryani
 
     # @param tx [Ractor] port
     # @param err [Ractor] port
+    # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/BlockLength
+    # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/MethodLength
     def initialize(tx, err)
       @rx = Ractor.new(tx, err) do |tx, err|
         bucket = FieldsBucket.new
@@ -17,6 +21,12 @@ module Biryani
             content << recv_frame.data
 
             if recv_frame.end_stream?
+              obj = bucket.http_request(content)
+              if obj.is_a?(ConnectionError)
+                err << obj
+                break
+              end
+
               # TODO: Hello, world!
               tx << Frame::RawHeaders.new(true, false, recv_frame.stream_id, nil, nil, [[':status', '200']], nil)
               tx << Frame::Data.new(true, recv_frame.stream_id, 'Hello, world!', nil)
@@ -24,9 +34,19 @@ module Biryani
             end
           when FrameType::HEADERS
             # TODO: check recv_frame.end_headers?
-            bucket.merge!(recv_frame.fields)
+            obj = bucket.merge!(recv_frame.fields)
+            if obj.is_a?(ConnectionError)
+              err << obj
+              break
+            end
 
             if recv_frame.end_stream?
+              obj = bucket.http_request(content)
+              if obj.is_a?(ConnectionError)
+                err << obj
+                break
+              end
+
               # TODO: Hello, world!
               tx << Frame::RawHeaders.new(true, false, recv_frame.stream_id, nil, nil, [[':status', '200']], nil)
               tx << Frame::Data.new(true, recv_frame.stream_id, 'Hello, world!', nil)
@@ -43,5 +63,9 @@ module Biryani
         end
       end
     end
+    # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/BlockLength
+    # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/MethodLength
   end
 end

@@ -1,3 +1,4 @@
+require 'net/http'
 require 'stringio'
 
 require_relative 'biryani/port'
