@@ -15,6 +15,7 @@ RSpec.describe FieldsBucket do
       expect(bucket.store('connection-specific', 'value')).to be_kind_of ConnectionError
       expect(bucket.store(':authority', 'localhost:8888')).to eq nil
       expect(bucket.store(':authority', 'localhost:8888')).to be_kind_of ConnectionError
+      expect(bucket.store('connection-specific', 'value')).to be_kind_of ConnectionError
     end
   end
 
