@@ -58,7 +58,7 @@ module Biryani
     # @return [Net::HTTPRequest, ConnectionError]
     def self.http_request(fields, s)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| fields.key?(x) }
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if s.length != fields['content-length'].to_i
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if fields.key?('content-length') && !s.empty? && s.length != fields['content-length'].to_i
 
       uri = URI("#{fields[':scheme']}://#{fields[':authority']}#{fields[':path']}")
       request = Net::HTTP.const_get(fields[':method'].capitalize).new(uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) })

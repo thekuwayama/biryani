@@ -25,7 +25,7 @@ RSpec.describe FieldsBucket do
     end
     it 'should not construct' do
       expect(FieldsBucket.http_request({ ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of ConnectionError
-      expect(FieldsBucket.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888', 'content-length' => '1' }, '')).to be_kind_of ConnectionError
+      expect(FieldsBucket.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888', 'content-length' => '0' }, '1')).to be_kind_of ConnectionError
     end
   end
 
