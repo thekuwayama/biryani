@@ -1,9 +1,13 @@
+require 'net/http'
+require 'stringio'
+
 require_relative 'biryani/port'
 require_relative 'biryani/connection'
 require_relative 'biryani/connection_error'
 require_relative 'biryani/data_buffer'
 require_relative 'biryani/frame'
 require_relative 'biryani/hpack'
+require_relative 'biryani/fields_bucket'
 require_relative 'biryani/server'
 require_relative 'biryani/state'
 require_relative 'biryani/streams_context'
