@@ -16,6 +16,7 @@ module Biryani
     def store(name, value)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'field name has uppercase letter') if name.downcase != name
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'unknown pseudo-header field name') if name[0] == ':' && !PSEUDO_HEADER_FIELDS.include?(name)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'appear pseudo-header fields after regular fields') if name[0] == ':' && @fields.any? { |name_, _| name_[0] != ':' }
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid #{name} field") if PSEUDO_HEADER_FIELDS.include?(name) && value.empty?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is prohibited') if name == 'connection-specific'
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'duplicated pseudo-header fields') if PSEUDO_HEADER_FIELDS.include?(name) && @fields.key?(name)

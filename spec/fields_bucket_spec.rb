@@ -31,11 +31,11 @@ RSpec.describe FieldsBucket do
   context 'cookie' do
     let(:bucket) do
       bucket = FieldsBucket.new
+      bucket.merge!({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' })
       bucket.store('cookie', 'a=1')
       bucket.store('cookie', 'b=2')
       bucket.store('cookie', 'c=3')
       bucket.store('cookie', 'd=4')
-      bucket.merge!({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' })
       bucket
     end
     let(:request) do
