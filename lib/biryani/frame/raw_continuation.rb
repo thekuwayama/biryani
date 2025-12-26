@@ -5,7 +5,7 @@ module Biryani
 
       # @param end_headers [Boolean]
       # @param stream_id [Integer]
-      # @param fields [String]
+      # @param fields [Array]
       def initialize(end_headers, stream_id, fields)
         @f_type = FrameType::CONTINUATION
         @end_headers = end_headers
