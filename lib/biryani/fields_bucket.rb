@@ -31,11 +31,11 @@ module Biryani
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
-    # @param h [Hash<String, String>]
+    # @param fields [Array]
     #
     # @return [nil, ConnectioError]
-    def merge!(h)
-      h.each do |name, value|
+    def merge!(fields)
+      fields.each do |name, value|
         err = store(name, value)
         return err unless err.nil?
       end
