@@ -20,10 +20,7 @@ module Biryani
       def store(name, value)
         @table.unshift([name, value])
         @size += name.bytesize + value.bytesize + 32
-        while @size > @limit
-          n, v = @table.pop
-          @size -= n.bytesize + v.bytesize + 32
-        end
+        chomp!(@limit)
       end
 
       # @param name [String]
