@@ -35,6 +35,7 @@ module Biryani
       # @param s [String]
       #
       # @return [Settings]
+      # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
       def self.read(s)
@@ -46,6 +47,8 @@ module Biryani
         setting = s[9..].unpack('nN' * (payload_length / 6)).each_slice(2).to_h
         return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'SETTINGS MUST NOT have setting with ack') \
           if ack && setting.any?
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_ENABLE_PUSH') \
+          if setting.key?(SettingsID::SETTINGS_ENABLE_PUSH) && ![0, 1].include?(setting[SettingsID::SETTINGS_ENABLE_PUSH])
         return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
           if setting.key?(SettingsID::SETTINGS_MAX_FRAME_SIZE) && setting[SettingsID::SETTINGS_MAX_FRAME_SIZE] < 16_384
         return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_MAX_FRAME_SIZE') \
@@ -55,6 +58,7 @@ module Biryani
 
         Settings.new(ack, stream_id, setting)
       end
+      # rubocop: enable Metrics/AbcSize
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
     end
