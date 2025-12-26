@@ -8,7 +8,7 @@ module Biryani
     #
     # @return [StreamContext]
     def new_context(stream_id)
-      ctx = StreamContext.new
+      ctx = StreamContext.new(stream_id)
       @h[stream_id] = ctx
       ctx
     end
@@ -62,14 +62,17 @@ module Biryani
 
   class StreamContext
     include Port
-    attr_accessor :stream, :tx, :err, :send_window, :recv_window, :state
+    attr_accessor :stream, :tx, :err, :send_window, :recv_window, :fragment, :content, :state
 
-    def initialize
+    # @param stream_id [Integer]
+    def initialize(stream_id)
       @tx = port
       @err = port
-      @stream = Stream.new(@tx, @err)
+      @stream = Stream.new(stream_id, @tx, @err)
       @send_window = Window.new
       @recv_window = Window.new
+      @fragment = StringIO.new
+      @content = StringIO.new
       @state = State.new
     end
 
