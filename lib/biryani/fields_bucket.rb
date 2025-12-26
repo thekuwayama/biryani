@@ -20,8 +20,12 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is prohibited') if name == 'connection-specific'
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'duplicated pseudo-header fields') if PSEUDO_HEADER_FIELDS.include?(name) && @fields.key?(name)
 
-      # TODO: cookie
-      @fields[name] = value
+      if name == 'cookie' && @fields.key?('cookie')
+        @fields[name] += "; #{value}"
+      else
+        @fields[name] = value
+      end
+
       nil
     end
     # rubocop: enable Metrics/CyclomaticComplexity
@@ -47,13 +51,15 @@ module Biryani
     # @param fields [Hash<String, String>]
     # @param s [String]
     #
-    # @return [Net::HTTPRequest]
+    # @return [Net::HTTPRequest, ConnectionError]
     def self.http_request(fields, s)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| fields.key?(x) }
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if s.length != fields['content-length'].to_i
 
-      # TODO: build Net::HTTPRequest
-      nil
+      uri = URI("#{fields[':scheme']}://#{fields[':authority']}#{fields[':path']}")
+      request = Net::HTTP.const_get(fields[':method'].capitalize).new(uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) })
+      request.body = s
+      request
     end
   end
 end
