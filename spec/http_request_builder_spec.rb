@@ -20,10 +20,10 @@ RSpec.describe HTTPRequestBuilder do
   end
 
   context 'http_request' do
-    it 'should construct' do
+    it 'should build' do
       expect(HTTPRequestBuilder.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of Net::HTTP::Get
     end
-    it 'should not construct' do
+    it 'should not build' do
       expect(HTTPRequestBuilder.http_request({ ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of ConnectionError
       expect(HTTPRequestBuilder.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888', 'content-length' => '0' }, '1')).to be_kind_of ConnectionError
     end
