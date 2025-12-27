@@ -160,7 +160,9 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
       stream_id = frame.stream_id
@@ -168,19 +170,31 @@ module Biryani
       case typ
       when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
-      when FrameType::DATA, FrameType::HEADERS, FrameType::CONTINUATION
-        if [FrameType::HEADERS, FrameType::CONTINUATION].include?(typ)
-          obj = frame.decode(@decoder)
+      when FrameType::DATA
+        ctx = @streams_ctx[stream_id]
+        ctx.content << frame.data
+        if frame.end_stream?
+          obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
           return [obj] if obj.is_a?(ConnectionError)
 
-          frame = obj
+          ctx.stream.rx << obj
         end
 
+        ctx.state.transition!(frame, :recv)
+        []
+      when FrameType::HEADERS, FrameType::CONTINUATION
         ctx = @streams_ctx[stream_id]
         return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
 
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
-        ctx.stream.rx << frame
+        ctx.fragment << frame.fragment
+        if frame.end_stream?
+          obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
+          return [obj] if obj.is_a?(ConnectionError)
+
+          ctx.stream.rx << obj
+        end
+
         ctx.state.transition!(frame, :recv)
         []
       when FrameType::PRIORITY
@@ -201,7 +215,9 @@ module Biryani
         []
       end
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
 
     def close
@@ -252,7 +268,6 @@ module Biryani
     # @param id [Integer] stream_id
     # @param streams_ctx [StreamsContext]
     def self.close_stream(id, streams_ctx)
-      streams_ctx[id].stream.rx.close_incoming
       streams_ctx[id].tx.close_incoming
       streams_ctx[id].err.close_incoming
     end
@@ -260,7 +275,6 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     def self.close_all_streams(streams_ctx)
       streams_ctx.each do |ctx|
-        ctx.stream.rx.close_incoming
         ctx.tx.close_incoming
         ctx.err.close_incoming
       end
@@ -272,7 +286,6 @@ module Biryani
       closed_ids = streams_ctx.closed_stream_ids
       closed_ids.filter! { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
-        streams_ctx[id].stream.rx.close_incoming
         streams_ctx[id].tx.close_incoming
         streams_ctx[id].err.close_incoming
         streams_ctx.delete(id)
@@ -387,6 +400,23 @@ module Biryani
 
       streams_ctx[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
       nil
+    end
+
+    # @param fragment [String]
+    # @param content [String]
+    # @param decoder [Decoder]
+    #
+    # @return [Net::HTTPRequest, ConnectionError]
+    def self.http_request(fragment, content, decoder)
+      obj = decoder.decode(fragment)
+      return obj if obj.is_a?(ConnectionError)
+
+      fields = obj
+      builder = HTTPRequestBuilder.new
+      err = builder.fields(fields)
+      return err unless err.nil?
+
+      builder.build(content)
     end
 
     # @return [Hash<Integer, Integer>]

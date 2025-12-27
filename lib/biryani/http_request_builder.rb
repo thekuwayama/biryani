@@ -1,10 +1,10 @@
 module Biryani
-  class FieldsBucket
+  class HTTPRequestBuilder
     PSEUDO_HEADER_FIELDS = [':authority', ':method', ':path', ':scheme'].freeze
     Ractor.make_shareable(PSEUDO_HEADER_FIELDS)
 
     def initialize
-      @fields = {}
+      @h = {}
     end
 
     # @param name [String]
@@ -14,19 +14,19 @@ module Biryani
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
-    def store(name, value)
+    def field(name, value)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'field name has uppercase letter') if name.downcase != name
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'unknown pseudo-header field name') if name[0] == ':' && !PSEUDO_HEADER_FIELDS.include?(name)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'appear pseudo-header fields after regular fields') if name[0] == ':' && @fields.any? { |name_, _| name_[0] != ':' }
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'appear pseudo-header fields after regular fields') if name[0] == ':' && @h.any? { |name_, _| name_[0] != ':' }
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid `#{name}` field") if PSEUDO_HEADER_FIELDS.include?(name) && value.empty?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is prohibited') if name == 'connection-specific'
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'duplicated pseudo-header fields') if PSEUDO_HEADER_FIELDS.include?(name) && @fields.key?(name)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'duplicated pseudo-header fields') if PSEUDO_HEADER_FIELDS.include?(name) && @h.key?(name)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, '`connection-specific` field is forbidden') if name == 'connection-specific'
 
-      if name == 'cookie' && @fields.key?('cookie')
-        @fields[name] += "; #{value}"
+      if name == 'cookie' && @h.key?('cookie')
+        @h[name] += "; #{value}"
       else
-        @fields[name] = value
+        @h[name] = value
       end
 
       nil
@@ -35,21 +35,23 @@ module Biryani
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
-    # @param fields [Array]
+    # @param arr [Array]
     #
     # @return [nil, ConnectioError]
-    def merge!(fields)
-      fields.each do |name, value|
-        err = store(name, value)
+    def fields(arr)
+      arr.each do |name, value|
+        err = field(name, value)
         return err unless err.nil?
       end
+
+      nil
     end
 
-    # @param content [StringIO]
+    # @param s [String]
     #
     # @return [Net::HTTPRequest]
-    def http_request(content)
-      self.class.http_request(@fields, content.string)
+    def build(s)
+      self.class.http_request(@h, s)
     end
 
     # @param fields [Hash<String, String>]
