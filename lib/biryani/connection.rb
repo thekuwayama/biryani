@@ -268,7 +268,6 @@ module Biryani
     # @param id [Integer] stream_id
     # @param streams_ctx [StreamsContext]
     def self.close_stream(id, streams_ctx)
-      streams_ctx[id].stream.rx.close_incoming
       streams_ctx[id].tx.close_incoming
       streams_ctx[id].err.close_incoming
     end
@@ -276,7 +275,6 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     def self.close_all_streams(streams_ctx)
       streams_ctx.each do |ctx|
-        ctx.stream.rx.close_incoming
         ctx.tx.close_incoming
         ctx.err.close_incoming
       end
@@ -288,7 +286,6 @@ module Biryani
       closed_ids = streams_ctx.closed_stream_ids
       closed_ids.filter! { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
-        streams_ctx[id].stream.rx.close_incoming
         streams_ctx[id].tx.close_incoming
         streams_ctx[id].err.close_incoming
         streams_ctx.delete(id)
