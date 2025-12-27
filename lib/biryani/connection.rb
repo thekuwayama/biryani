@@ -174,12 +174,7 @@ module Biryani
         ctx = @streams_ctx[stream_id]
         ctx.content << frame.data
         if frame.end_stream?
-          fields = @decoder.decode(ctx.fragment.string)
-          bucket = FieldsBucket.new
-          obj = bucket.merge!(fields)
-          return [obj] if obj.is_a?(ConnectionError)
-
-          obj = bucket.http_request(ctx.content)
+          obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
           return [obj] if obj.is_a?(ConnectionError)
 
           ctx.stream.rx << obj
@@ -194,12 +189,7 @@ module Biryani
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
         ctx.fragment << frame.fragment
         if frame.end_stream?
-          fields = @decoder.decode(ctx.fragment.string)
-          bucket = FieldsBucket.new
-          obj = bucket.merge!(fields)
-          return [obj] if obj.is_a?(ConnectionError)
-
-          obj = bucket.http_request(ctx.content)
+          obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
           return [obj] if obj.is_a?(ConnectionError)
 
           ctx.stream.rx << obj
@@ -413,6 +403,23 @@ module Biryani
 
       streams_ctx[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
       nil
+    end
+
+    # @param fragment [String]
+    # @param content [String]
+    # @param decoder [Decoder]
+    #
+    # @return [Net::HTTPRequest, ConnectionError]
+    def self.http_request(fragment, content, decoder)
+      obj = decoder.decode(fragment)
+      return obj if obj.is_a?(ConnectionError)
+
+      fields = obj
+      builder = HTTPRequestBuilder.new
+      err = builder.fields(fields)
+      return err unless err.nil?
+
+      builder.build(content)
     end
 
     # @return [Hash<Integer, Integer>]
