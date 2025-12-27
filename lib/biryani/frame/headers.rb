@@ -105,17 +105,6 @@ module Biryani
       # rubocop: enable Metrics/AbcSize
       # rubocop: enable Metrics/CyclomaticComplexity
       # rubocop: enable Metrics/PerceivedComplexity
-
-      # @param decoder [Decoder]
-      #
-      # @return [RawHeaders]
-      def decode(decoder)
-        fields = decoder.decode(@fragment)
-
-        RawHeaders.new(@end_headers, @end_stream, @stream_id, @stream_dependency, @weight, fields, @padding)
-      rescue HPACK::Error::HuffmanDecodeError, HPACK::Error::HPACKDecodeError
-        ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
-      end
     end
   end
 end

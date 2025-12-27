@@ -43,17 +43,6 @@ module Biryani
 
         Continuation.new(end_headers, stream_id, fragment)
       end
-
-      # @param decoder [Decoder]
-      #
-      # @return [RawContinuation]
-      def decode(decoder)
-        fields = decoder.decode(@fragment)
-
-        RawContinuation.new(@end_headers, @stream_id, fields)
-      rescue HPACK::Error::HuffmanDecodeError, HPACK::Error::HPACKDecodeError
-        ConnectionError.new(ErrorCode::COMPRESSION_ERROR, 'hpack decode error')
-      end
     end
   end
 end
