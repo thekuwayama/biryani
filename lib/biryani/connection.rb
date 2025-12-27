@@ -84,8 +84,6 @@ module Biryani
           elsif obj.length > @max_frame_size
             self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
-          elsif [FrameType::GOAWAY, FrameType::RST_STREAM].include?(obj.f_type)
-            close if self.class.transition_state(obj, @streams_ctx)
           else
             recv_dispatch(obj).each do |frame|
               reply_frame = self.class.ensure_frame(frame, @streams_ctx.last_stream_id)
@@ -172,37 +170,55 @@ module Biryani
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
       when FrameType::DATA
         ctx = @streams_ctx[stream_id]
+        obj = ctx.state.transition!(frame, :recv)
+        return [obj] if obj.is_a?(ConnectionError)
+
         ctx.content << frame.data
-        if frame.end_stream?
+        if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
           return [obj] if obj.is_a?(ConnectionError)
 
           ctx.stream.rx << obj
         end
 
-        ctx.state.transition!(frame, :recv)
         []
       when FrameType::HEADERS, FrameType::CONTINUATION
         ctx = @streams_ctx[stream_id]
         return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
 
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
+        obj = ctx.state.transition!(frame, :recv)
+        return [obj] if obj.is_a?(ConnectionError)
+
         ctx.fragment << frame.fragment
-        if frame.end_stream?
+        if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
           return [obj] if obj.is_a?(ConnectionError)
 
           ctx.stream.rx << obj
         end
 
-        ctx.state.transition!(frame, :recv)
         []
       when FrameType::PRIORITY
+        ctx = @streams_ctx[stream_id]
+        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
+
+        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
+        obj = ctx.state.transition!(frame, :recv)
+        return [obj] if obj.is_a?(ConnectionError)
+
         # ignore PRIORITY Frame
         []
       when FrameType::PUSH_PROMISE
         # TODO
       when FrameType::RST_STREAM
+        ctx = @streams_ctx[stream_id]
+        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
+
+        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
+        obj = ctx.state.transition!(frame, :recv)
+        return [obj] if obj.is_a?(ConnectionError)
+
         self.class.handle_rst_stream(frame, @streams_ctx)
         []
       when FrameType::WINDOW_UPDATE
@@ -251,18 +267,16 @@ module Biryani
     def self.transition_state(send_frame, streams_ctx)
       stream_id = send_frame.stream_id
       typ = send_frame.f_type
-      streams_ctx[stream_id].state.transition!(send_frame, :send) unless stream_id.zero?
-      if typ == FrameType::GOAWAY
+      case typ
+      when FrameType::SETTINGS, FrameType::PING
+        false
+      when FrameType::GOAWAY
         close_all_streams(streams_ctx)
-        return true
+        true
+      else
+        streams_ctx[stream_id].state.transition!(send_frame, :send)
+        false
       end
-
-      if typ == FrameType::RST_STREAM
-        streams_ctx[stream_id].state.close
-        close_stream(stream_id, streams_ctx)
-      end
-
-      false
     end
 
     # @param id [Integer] stream_id
@@ -318,7 +332,7 @@ module Biryani
         do_send(io, data, false)
         send_window.consume!(data.length)
         streams_ctx[data.stream_id].send_window.consume!(data.length)
-        return false
+        return transition_state(frame, streams_ctx)
       end
 
       data_buffer << data
