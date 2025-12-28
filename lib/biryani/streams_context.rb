@@ -39,11 +39,6 @@ module Biryani
       @h.values.filter { |ctx| !ctx.closed? }.map(&:tx)
     end
 
-    # @return [Array<Port>]
-    def errs
-      @h.values.map(&:err)
-    end
-
     # @return [Integer]
     def count_active
       @h.values.filter(&:active?).length
@@ -61,13 +56,12 @@ module Biryani
   end
 
   class StreamContext
-    attr_accessor :stream, :tx, :err, :send_window, :recv_window, :fragment, :content, :state
+    attr_accessor :stream, :tx, :send_window, :recv_window, :fragment, :content, :state
 
     # @param stream_id [Integer]
     def initialize(stream_id)
       @tx = Ractor::Port.new
-      @err = Ractor::Port.new
-      @stream = Stream.new(stream_id, @tx, @err)
+      @stream = Stream.new(@tx, stream_id)
       @send_window = Window.new
       @recv_window = Window.new
       @fragment = StringIO.new
