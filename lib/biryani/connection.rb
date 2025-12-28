@@ -20,7 +20,6 @@ module Biryani
 
     def initialize
       @sock = nil # Ractor
-      @max_frame_size = 16_384
       @streams_ctx = StreamsContext.new
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
@@ -80,7 +79,7 @@ module Biryani
             reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state_send(reply_frame, @streams_ctx)
-          elsif obj.length > @max_frame_size
+          elsif obj.length > @send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
             self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
           else
