@@ -15,16 +15,11 @@ module Biryani
     def fields
       fields = [[':status', @status.to_s]]
       @h.each do |name, value|
-        # TODO: modify pseudo-header
+        # TODO: validate fields
         fields << [name.to_s.downcase, value.to_s]
       end
 
       fields
-    end
-
-    # @return [String]
-    def content
-      @s
     end
 
     # @param encoder [Encoder]
@@ -36,14 +31,14 @@ module Biryani
       len = (fragment.bytesize + max_frame_size - 1) / max_frame_size
       frames = fragment.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
         if index.zero?
-          Frame::Headers.new(len < 2, content.empty?, @stream_id, nil, nil, s, nil)
+          Frame::Headers.new(len < 2, @s.empty?, @stream_id, nil, nil, s, nil)
         else
           Frame::Continuation.new(index == len - 1, @stream_id, s)
         end
       end
 
-      len = (content.bytesize + max_frame_size - 1) / max_frame_size
-      frames += content.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
+      len = (@s.bytesize + max_frame_size - 1) / max_frame_size
+      frames += @s.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
         Frame::Data.new(index == len - 1, @stream_id, s, nil)
       end
 

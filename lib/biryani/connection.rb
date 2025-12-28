@@ -431,9 +431,11 @@ module Biryani
     # @param max_frame_size [Integer]
     #
     # @return [Array<Object>] frames
+    # rubocop: disable Metrics/ParameterLists
     def self.http_response(status, h, s, stream_id, encoder, max_frame_size)
       HTTPResponseParser.new(status, h, s, stream_id).parse(encoder, max_frame_size)
     end
+    # rubocop: enable Metrics/ParameterLists
 
     # @return [Hash<Integer, Integer>]
     def self.default_settings
