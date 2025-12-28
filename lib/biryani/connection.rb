@@ -10,7 +10,6 @@ module Biryani
 
   # rubocop: disable Metrics/ClassLength
   class Connection
-    include Port
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
 
@@ -52,7 +51,7 @@ module Biryani
 
     # @param io [IO]
     def recv_loop(io)
-      Ractor.new(io, @sock = port) do |io_, sock_|
+      Ractor.new(io, @sock = Ractor::Port.new) do |io_, sock_|
         loop do
           obj = Frame.read(io_)
           break if obj.nil?
@@ -283,15 +282,15 @@ module Biryani
     # @param id [Integer] stream_id
     # @param streams_ctx [StreamsContext]
     def self.close_stream(id, streams_ctx)
-      streams_ctx[id].tx.close_incoming
-      streams_ctx[id].err.close_incoming
+      streams_ctx[id].tx.close
+      streams_ctx[id].err.close
     end
 
     # @param streams_ctx [StreamsContext]
     def self.close_all_streams(streams_ctx)
       streams_ctx.each do |ctx|
-        ctx.tx.close_incoming
-        ctx.err.close_incoming
+        ctx.tx.close
+        ctx.err.close
       end
     end
 
@@ -301,8 +300,8 @@ module Biryani
       closed_ids = streams_ctx.closed_stream_ids
       closed_ids.filter! { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
-        streams_ctx[id].tx.close_incoming
-        streams_ctx[id].err.close_incoming
+        streams_ctx[id].tx.close
+        streams_ctx[id].err.close
         streams_ctx.delete(id)
       end
     end

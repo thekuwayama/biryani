@@ -3,8 +3,8 @@ module Biryani
     attr_accessor :rx
 
     # @param stream_id [Integer]
-    # @param tx [Ractor] port
-    # @param err [Ractor] port
+    # @param tx [Port]
+    # @param err [Port]
     def initialize(stream_id, tx, err)
       @rx = Ractor.new(stream_id, tx, err) do |stream_id, tx, _err|
         _ = Ractor.receive

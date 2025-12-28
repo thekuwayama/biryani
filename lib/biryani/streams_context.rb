@@ -34,12 +34,12 @@ module Biryani
       @h.each_value(&block)
     end
 
-    # @return [Array<Ractor>] ports
+    # @return [Array<Port>]
     def txs
       @h.values.filter { |ctx| !ctx.closed? }.map(&:tx)
     end
 
-    # @return [Array<Ractor>] ports
+    # @return [Array<Port>]
     def errs
       @h.values.map(&:err)
     end
@@ -61,13 +61,12 @@ module Biryani
   end
 
   class StreamContext
-    include Port
     attr_accessor :stream, :tx, :err, :send_window, :recv_window, :fragment, :content, :state
 
     # @param stream_id [Integer]
     def initialize(stream_id)
-      @tx = port
-      @err = port
+      @tx = Ractor::Port.new
+      @err = Ractor::Port.new
       @stream = Stream.new(stream_id, @tx, @err)
       @send_window = Window.new
       @recv_window = Window.new

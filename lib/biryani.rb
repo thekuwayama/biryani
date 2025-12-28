@@ -1,7 +1,6 @@
 require 'net/http'
 require 'stringio'
 
-require_relative 'biryani/port'
 require_relative 'biryani/connection'
 require_relative 'biryani/connection_error'
 require_relative 'biryani/data_buffer'
