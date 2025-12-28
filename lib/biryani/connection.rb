@@ -89,8 +89,7 @@ module Biryani
             end
           end
         else
-          HTTPResponseParser.new(*obj).parse.each do |send_frame|
-            send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
+          self.class.http_response(*obj, @encoder, @send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
             close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
           end
 
@@ -423,6 +422,17 @@ module Biryani
       return err unless err.nil?
 
       builder.build(content)
+    end
+
+    # @param status [Integer]
+    # @param h [Hash]
+    # @param s [String]
+    # @param stream_id [Integer]
+    # @param max_frame_size [Integer]
+    #
+    # @return [Array<Object>] frames
+    def self.http_response(status, h, s, stream_id, encoder, max_frame_size)
+      HTTPResponseParser.new(status, h, s, stream_id).parse(encoder, max_frame_size)
     end
 
     # @return [Hash<Integer, Integer>]
