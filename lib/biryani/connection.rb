@@ -185,6 +185,7 @@ module Biryani
       when FrameType::HEADERS, FrameType::CONTINUATION
         ctx = @streams_ctx[stream_id]
         return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
+        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
 
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
         obj = ctx.state.transition!(frame, :recv)
@@ -202,6 +203,7 @@ module Biryani
       when FrameType::PRIORITY
         ctx = @streams_ctx[stream_id]
         return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
+        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
 
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
         obj = ctx.state.transition!(frame, :recv)
@@ -214,6 +216,7 @@ module Biryani
       when FrameType::RST_STREAM
         ctx = @streams_ctx[stream_id]
         return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
+        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
 
         ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
         obj = ctx.state.transition!(frame, :recv)
