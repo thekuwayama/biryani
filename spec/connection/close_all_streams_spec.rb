@@ -11,9 +11,7 @@ RSpec.describe Connection do
     it 'should close' do
       Connection.close_all_streams(streams_ctx)
       expect { streams_ctx[1].tx << nil }.to raise_error Ractor::ClosedError
-      expect { streams_ctx[1].err << nil }.to raise_error Ractor::ClosedError
       expect { streams_ctx[2].tx << nil }.to raise_error Ractor::ClosedError
-      expect { streams_ctx[2].err << nil }.to raise_error Ractor::ClosedError
     end
   end
 end

@@ -23,9 +23,7 @@ RSpec.describe Connection do
       streams_ctx[2].state.transition!(headers, :recv)
       Connection.close_all_streams(streams_ctx)
       expect { streams_ctx[1].tx << nil }.to raise_error Ractor::ClosedError
-      expect { streams_ctx[1].err << nil }.to raise_error Ractor::ClosedError
       expect { streams_ctx[2].tx << nil }.to raise_error Ractor::ClosedError
-      expect { streams_ctx[2].err << nil }.to raise_error Ractor::ClosedError
     end
 
     let(:rst_stream) do
@@ -35,9 +33,7 @@ RSpec.describe Connection do
       streams_ctx[2].state.transition!(headers, :recv)
       Connection.transition_state_send(rst_stream, streams_ctx)
       expect { streams_ctx[1].tx << nil }.to_not raise_error
-      expect { streams_ctx[1].err << nil }.to_not raise_error
       expect { streams_ctx[2].tx << nil }.to_not raise_error
-      expect { streams_ctx[2].err << nil }.to_not raise_error
     end
   end
 end

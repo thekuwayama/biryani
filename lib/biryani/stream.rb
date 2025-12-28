@@ -2,15 +2,13 @@ module Biryani
   class Stream
     attr_accessor :rx
 
-    # @param stream_id [Integer]
     # @param tx [Port]
-    # @param err [Port]
-    def initialize(stream_id, tx, err)
-      @rx = Ractor.new(stream_id, tx, err) do |stream_id, tx, _err|
+    # @param stream_id [Integer]
+    def initialize(tx, stream_id)
+      @rx = Ractor.new(tx, stream_id) do |tx, stream_id|
         _ = Ractor.receive
 
-        tx << Frame::RawHeaders.new(true, false, stream_id, nil, nil, [[':status', '200']], nil)
-        tx << Frame::Data.new(true, stream_id, 'Hello, world!', nil)
+        tx << [200, {}, 'Hello, world!', stream_id]
       end
     end
   end

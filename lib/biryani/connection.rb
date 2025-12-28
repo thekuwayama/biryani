@@ -68,7 +68,7 @@ module Biryani
     # rubocop: disable Metrics/PerceivedComplexity
     def send_loop(io)
       loop do
-        ports = @streams_ctx.txs + @streams_ctx.errs
+        ports = @streams_ctx.txs
         ports << @sock
         next if ports.empty?
 
@@ -89,9 +89,9 @@ module Biryani
             end
           end
         else
-          send_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
-          send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
-          close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
+          self.class.http_response(*obj, @encoder, @send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
+            close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
+          end
 
           self.class.delete_streams(@streams_ctx, @data_buffer)
         end
@@ -283,14 +283,12 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     def self.close_stream(id, streams_ctx)
       streams_ctx[id].tx.close
-      streams_ctx[id].err.close
     end
 
     # @param streams_ctx [StreamsContext]
     def self.close_all_streams(streams_ctx)
       streams_ctx.each do |ctx|
         ctx.tx.close
-        ctx.err.close
       end
     end
 
@@ -301,7 +299,6 @@ module Biryani
       closed_ids.filter! { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
         streams_ctx[id].tx.close
-        streams_ctx[id].err.close
         streams_ctx.delete(id)
       end
     end
@@ -426,6 +423,19 @@ module Biryani
 
       builder.build(content)
     end
+
+    # @param status [Integer]
+    # @param h [Hash]
+    # @param s [String]
+    # @param stream_id [Integer]
+    # @param max_frame_size [Integer]
+    #
+    # @return [Array<Object>] frames
+    # rubocop: disable Metrics/ParameterLists
+    def self.http_response(status, h, s, stream_id, encoder, max_frame_size)
+      HTTPResponseParser.new(status, h, s, stream_id).parse(encoder, max_frame_size)
+    end
+    # rubocop: enable Metrics/ParameterLists
 
     # @return [Hash<Integer, Integer>]
     def self.default_settings
