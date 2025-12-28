@@ -12,10 +12,9 @@ RSpec.describe HTTPRequestBuilder do
       expect(builder.field('KEY', 'VALUE')).to be_kind_of ConnectionError
       expect(builder.field(':key', 'value')).to be_kind_of ConnectionError
       expect(builder.field(':path', '')).to be_kind_of ConnectionError
-      expect(builder.field('connection-specific', 'value')).to be_kind_of ConnectionError
+      expect(builder.field('connection', 'keep-alive')).to be_kind_of ConnectionError
       expect(builder.field(':authority', 'localhost:8888')).to eq nil
       expect(builder.field(':authority', 'localhost:8888')).to be_kind_of ConnectionError
-      expect(builder.field('connection-specific', 'value')).to be_kind_of ConnectionError
     end
   end
 
