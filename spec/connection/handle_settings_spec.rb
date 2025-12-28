@@ -13,11 +13,11 @@ RSpec.describe Connection do
       Frame::Settings.new(false, 0, { SettingsID::SETTINGS_HEADER_TABLE_SIZE => 8_192 })
     end
     it 'should handle' do
-      tuple = Connection.handle_settings(settings1, send_settings, decoder)
-      expect(tuple[0].ack?).to eq true
-      expect(tuple[0].setting.empty?).to eq true
-      expect(tuple[1]).to eq 0xffffffff
-      expect(tuple[2]).to eq 16_384
+      reply_settings = Connection.handle_settings(settings1, send_settings, decoder)
+      expect(reply_settings.ack?).to eq true
+      expect(reply_settings.setting.empty?).to eq true
+      expect(send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]).to eq 0xffffffff
+      expect(send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).to eq 16_384
       expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 8_192
     end
 

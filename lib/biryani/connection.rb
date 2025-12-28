@@ -20,7 +20,6 @@ module Biryani
 
     def initialize
       @sock = nil # Ractor
-      @max_streams = 0xffffffff
       @max_frame_size = 16_384
       @streams_ctx = StreamsContext.new
       @encoder = HPACK::Encoder.new(4_096)
@@ -130,9 +129,8 @@ module Biryani
       when FrameType::SETTINGS
         obj = self.class.handle_settings(frame, @send_settings, @decoder)
         return [] if obj.nil?
-        return [obj] if obj.is_a?(ConnectionError)
 
-        settings_ack, @max_streams, @max_frame_size = obj
+        settings_ack = obj
         [settings_ack]
       when FrameType::PING
         obj = self.class.handle_ping(frame)
@@ -168,7 +166,7 @@ module Biryani
       return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
 
-      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @max_streams)
+      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS])
       return [obj] if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
 
       ctx = obj
@@ -374,18 +372,12 @@ module Biryani
     # @param decoder [Decoder]
     #
     # @return [Settings]
-    # @return [Integer] max_streams
-    # @return [Integer] max_frame_size
     def self.handle_settings(settings, send_settings, decoder)
       return nil if settings.ack?
 
       send_settings.merge!(settings.setting)
       decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
-      [
-        Frame::Settings.new(true, 0, {}),
-        send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS],
-        send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
-      ]
+      Frame::Settings.new(true, 0, {})
     end
 
     # @param ping [Ping]
