@@ -13,11 +13,6 @@ module Biryani
       @state = obj
     end
 
-    # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
-    def to_sym
-      @state
-    end
-
     #                          +--------+
     #                  send PP |        | recv PP
     #                 ,--------+  idle  +--------.
@@ -73,8 +68,6 @@ module Biryani
         state
       in [:idle, FrameType::PUSH_PROMISE, :send]
         :reserved_local
-      in [:idle, FrameType::PUSH_PROMISE, :recv]
-        :reserved_remote
       in [:idle, _, _]
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
 
