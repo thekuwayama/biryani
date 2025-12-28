@@ -56,7 +56,7 @@ module Biryani
 
     # @return [Integer]
     def last_stream_id
-      @h.keys.max || 0
+      @h.reject { |_, ctx| ctx.idle? }.keys.max || 0
     end
   end
 
@@ -79,6 +79,11 @@ module Biryani
     # @return [Boolean]
     def closed?
       @state.closed?
+    end
+
+    # @return [Boolean]
+    def idle?
+      @state.idle?
     end
 
     # @return [Boolean]

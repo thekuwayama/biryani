@@ -248,10 +248,12 @@ module Biryani
     #
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/PerceivedComplexity
     def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams)
       ctx = streams_ctx[stream_id]
       return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'new stream identifier is less than the existing stream identifiers') if ctx.nil? && streams_ctx.last_stream_id > stream_id
 
       ctx = streams_ctx.new_context(stream_id) if ctx.nil?
       obj = ctx.state.transition!(recv_frame, :recv)
@@ -260,6 +262,7 @@ module Biryani
       ctx
     end
     # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param send_frame [Object]
     # @param streams_ctx [StreamsContext]

@@ -207,10 +207,16 @@ module Biryani
     end
 
     # @return [Boolean]
+    def idle?
+      @state == :idle
+    end
+
+    # @return [Boolean]
     def active?
       @state == :open || @state == :half_closed_local || @state == :half_closed_remote
     end
 
+    # @return [Boolean]
     def half_closed_remote?
       @state == :half_closed_remote
     end
