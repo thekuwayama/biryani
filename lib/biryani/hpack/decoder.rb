@@ -10,7 +10,7 @@ module Biryani
       #
       # @return [Array]
       def decode(s)
-        Fields.decode(s, @dynamic_table)
+        Fields.decode(s.force_encoding(Encoding::ASCII_8BIT), @dynamic_table)
       end
 
       # @param new_limit [Integer]
