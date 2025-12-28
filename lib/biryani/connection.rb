@@ -80,7 +80,7 @@ module Biryani
           if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
             reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
-            close if self.class.transition_state(reply_frame, @streams_ctx)
+            close if self.class.transition_state_send(reply_frame, @streams_ctx)
           elsif obj.length > @max_frame_size
             self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
@@ -88,7 +88,7 @@ module Biryani
             recv_dispatch(obj).each do |frame|
               reply_frame = self.class.unwrap(frame, @streams_ctx.last_stream_id)
               self.class.do_send(io, reply_frame, true)
-              close if self.class.transition_state(reply_frame, @streams_ctx)
+              close if self.class.transition_state_send(reply_frame, @streams_ctx)
             end
           end
         else
@@ -165,18 +165,15 @@ module Biryani
     def handle_stream_frame(frame)
       stream_id = frame.stream_id
       typ = frame.f_type
+      return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
+        if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
+
+      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @max_streams)
+      return [obj] if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
+
+      ctx = obj
       case typ
-      when FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY
-        [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
       when FrameType::DATA
-        ctx = @streams_ctx[stream_id]
-        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
-        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
-
-        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
-        obj = ctx.state.transition!(frame, :recv)
-        return [obj] if obj.is_a?(ConnectionError)
-
         ctx.content << frame.data
         if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
@@ -187,14 +184,6 @@ module Biryani
 
         []
       when FrameType::HEADERS, FrameType::CONTINUATION
-        ctx = @streams_ctx[stream_id]
-        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
-        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
-
-        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
-        obj = ctx.state.transition!(frame, :recv)
-        return [obj] if obj.is_a?(ConnectionError)
-
         ctx.fragment << frame.fragment
         if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
@@ -205,27 +194,12 @@ module Biryani
 
         []
       when FrameType::PRIORITY
-        ctx = @streams_ctx[stream_id]
-        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
-        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
-
-        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
-        obj = ctx.state.transition!(frame, :recv)
-        return [obj] if obj.is_a?(ConnectionError)
-
         # ignore PRIORITY Frame
         []
       when FrameType::PUSH_PROMISE
         # TODO
+        []
       when FrameType::RST_STREAM
-        ctx = @streams_ctx[stream_id]
-        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
-        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
-
-        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
-        obj = ctx.state.transition!(frame, :recv)
-        return [obj] if obj.is_a?(ConnectionError)
-
         self.class.handle_rst_stream(frame, @streams_ctx)
         []
       when FrameType::WINDOW_UPDATE
@@ -267,11 +241,31 @@ module Biryani
       end
     end
 
-    # @param send_frame [Frame]
+    # @param recv_frame [Object]
+    # @param streams_ctx [StreamsContext]
+    # @param stream_id [Integer]
+    # @param max_streams [Integer]
+    #
+    # @return [StreamContext, StreamError, ConnectionError]
+    # rubocop: disable Metrics/CyclomaticComplexity
+    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams)
+      ctx = streams_ctx[stream_id]
+      return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
+
+      ctx = streams_ctx.new_context(stream_id) if ctx.nil?
+      obj = ctx.state.transition!(recv_frame, :recv)
+      return obj if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+
+      ctx
+    end
+    # rubocop: enable Metrics/CyclomaticComplexity
+
+    # @param send_frame [Object]
     # @param streams_ctx [StreamsContext]
     #
     # @return [Boolean] should close connection?
-    def self.transition_state(send_frame, streams_ctx)
+    def self.transition_state_send(send_frame, streams_ctx)
       stream_id = send_frame.stream_id
       typ = send_frame.f_type
       case typ
@@ -331,7 +325,7 @@ module Biryani
     def self.send(io, frame, send_window, streams_ctx, data_buffer)
       if frame.f_type != FrameType::DATA
         do_send(io, frame, false)
-        return transition_state(frame, streams_ctx)
+        return transition_state_send(frame, streams_ctx)
       end
 
       data = frame
@@ -339,7 +333,7 @@ module Biryani
         do_send(io, data, false)
         send_window.consume!(data.length)
         streams_ctx[data.stream_id].send_window.consume!(data.length)
-        return transition_state(frame, streams_ctx)
+        return transition_state_send(frame, streams_ctx)
       end
 
       data_buffer << data
