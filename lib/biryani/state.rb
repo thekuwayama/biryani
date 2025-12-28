@@ -13,11 +13,6 @@ module Biryani
       @state = obj
     end
 
-    # @return [:idle, :open, :reserved_local, :reserved_remote, :half_closed_local, :half_closed_remote, :closed]
-    def to_sym
-      @state
-    end
-
     #                          +--------+
     #                  send PP |        | recv PP
     #                 ,--------+  idle  +--------.
