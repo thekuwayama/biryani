@@ -27,7 +27,6 @@ RSpec.describe Connection do
     it 'should send' do
       streams_ctx1[2].state.transition!(headers1, :recv)
       streams_ctx1[2].state.transition!(data1, :recv)
-      pp streams_ctx1
       Connection.send(io, headers1, send_window1, streams_ctx1, data_buffer)
       Connection.send(io, data1, send_window1, streams_ctx1, data_buffer)
       expect(io.string).to eq "\x00\x00\x0d\x01\x04\x00\x00\x00\x02this is dummy\x00\x00\x14\x00\x09\x00\x00\x00\x02\x06\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x21\x48\x6f\x77\x64\x79\x21".b
