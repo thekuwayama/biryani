@@ -1,19 +1,19 @@
 require_relative '../spec_helper'
 
 RSpec.describe Connection do
-  context 'ensure_frame' do
+  context 'unwrap' do
     let(:data) do
       Frame::Data.new(false, 2, 'Hello, world!', 'Howdy!')
     end
     it 'should ensure' do
-      expect(Connection.ensure_frame(data, 0x01)).to eq data
+      expect(Connection.unwrap(data, 0x01)).to eq data
     end
 
     let(:connection_error) do
       ConnectionError.new(ErrorCode::NO_ERROR, 'debug')
     end
     it 'should ensure' do
-      frame = Connection.ensure_frame(connection_error, 0x01)
+      frame = Connection.unwrap(connection_error, 0x01)
       expect(frame).to be_kind_of Frame::Goaway
     end
 
@@ -21,7 +21,7 @@ RSpec.describe Connection do
       StreamError.new(ErrorCode::NO_ERROR, 0x01, 'debug')
     end
     it 'should ensure' do
-      frame = Connection.ensure_frame(stream_error, 0x01)
+      frame = Connection.unwrap(stream_error, 0x01)
       expect(frame).to be_kind_of Frame::RstStream
     end
   end

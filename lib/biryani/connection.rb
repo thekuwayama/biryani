@@ -78,7 +78,7 @@ module Biryani
         port_, obj = Ractor.select(*ports)
         if port_ == @sock
           if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
-            reply_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+            reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state(reply_frame, @streams_ctx)
           elsif obj.length > @max_frame_size
@@ -86,13 +86,13 @@ module Biryani
             close
           else
             recv_dispatch(obj).each do |frame|
-              reply_frame = self.class.ensure_frame(frame, @streams_ctx.last_stream_id)
+              reply_frame = self.class.unwrap(frame, @streams_ctx.last_stream_id)
               self.class.do_send(io, reply_frame, true)
               close if self.class.transition_state(reply_frame, @streams_ctx)
             end
           end
         else
-          send_frame = self.class.ensure_frame(obj, @streams_ctx.last_stream_id)
+          send_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
           send_frame = send_frame.encode(@encoder) if send_frame.is_a?(Frame::RawHeaders) || send_frame.is_a?(Frame::RawContinuation)
           close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
 
@@ -256,7 +256,7 @@ module Biryani
     # @param last_stream_id [Integer]
     #
     # @return [Frame]
-    def self.ensure_frame(obj, last_stream_id)
+    def self.unwrap(obj, last_stream_id)
       case obj
       when ConnectionError
         obj.goaway(last_stream_id)
