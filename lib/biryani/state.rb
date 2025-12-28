@@ -47,6 +47,8 @@ module Biryani
     # @param frame [Object]
     # @param direction [:send, :recv]
     #
+    # @raise [StandardError]
+    #
     # @return [Symbol, ConnectionError]
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity

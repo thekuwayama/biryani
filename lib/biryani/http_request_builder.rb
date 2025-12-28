@@ -21,6 +21,8 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid `#{name}` field") if PSEUDO_HEADER_FIELDS.include?(name) && value.empty?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is forbidden') if name == 'connection'
 
+      # TODO: trailers
+
       if name == 'cookie' && @h.key?('cookie')
         @h[name] += "; #{value}"
       else
