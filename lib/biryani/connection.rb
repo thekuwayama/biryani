@@ -170,6 +170,10 @@ module Biryani
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")]
       when FrameType::DATA
         ctx = @streams_ctx[stream_id]
+        return [StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams')] if ctx.nil? && @streams_ctx.count_active + 1 > @max_streams
+        return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier')] if ctx.nil? && stream_id.even?
+
+        ctx = @streams_ctx.new_context(stream_id) if ctx.nil?
         obj = ctx.state.transition!(frame, :recv)
         return [obj] if obj.is_a?(ConnectionError)
 
