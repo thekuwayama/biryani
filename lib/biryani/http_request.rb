@@ -3,8 +3,8 @@ module Biryani
     attr_accessor :method, :uri, :fields, :content
 
     # @param method [String]
-    # @param uri [URI<String, String>]
-    # @param fields [Hash]
+    # @param uri [URI]
+    # @param fields [Hash<String, String>]
     # @param content [String]
     def initialize(method, uri, fields, content)
       @method = method
