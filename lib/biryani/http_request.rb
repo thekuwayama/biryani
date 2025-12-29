@@ -1,4 +1,19 @@
 module Biryani
+  class HTTPRequest
+    attr_accessor :method, :uri, :fields, :content
+
+    # @param method [String]
+    # @param uri [URI<String, String>]
+    # @param fields [Hash]
+    # @param content [String]
+    def initialize(method, uri, fields, content)
+      @method = method
+      @uri = uri
+      @fields = fields
+      @content = content
+    end
+  end
+
   class HTTPRequestBuilder
     PSEUDO_HEADER_FIELDS = [':authority', ':method', ':path', ':scheme'].freeze
     Ractor.make_shareable(PSEUDO_HEADER_FIELDS)
@@ -48,7 +63,7 @@ module Biryani
 
     # @param s [String]
     #
-    # @return [Net::HTTPRequest]
+    # @return [HTTPRequest]
     def build(s)
       self.class.http_request(@h, s)
     end
@@ -56,15 +71,13 @@ module Biryani
     # @param fields [Hash<String, String>]
     # @param s [String]
     #
-    # @return [Net::HTTPRequest, ConnectionError]
+    # @return [HTTPRequest, ConnectionError]
     def self.http_request(fields, s)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| fields.key?(x) }
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if fields.key?('content-length') && !s.empty? && s.length != fields['content-length'].to_i
 
       uri = URI("#{fields[':scheme']}://#{fields[':authority']}#{fields[':path']}")
-      request = Net::HTTP.const_get(fields[':method'].capitalize).new(uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) })
-      request.body = s
-      request
+      HTTPRequest.new(fields[':method'], uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) }, s)
     end
   end
 end

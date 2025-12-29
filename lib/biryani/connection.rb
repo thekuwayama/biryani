@@ -411,7 +411,7 @@ module Biryani
     # @param content [String]
     # @param decoder [Decoder]
     #
-    # @return [Net::HTTPRequest, ConnectionError]
+    # @return [HTTPRequest, ConnectionError]
     def self.http_request(fragment, content, decoder)
       obj = decoder.decode(fragment)
       return obj if obj.is_a?(ConnectionError)
