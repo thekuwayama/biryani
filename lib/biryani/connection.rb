@@ -17,8 +17,10 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
-    def initialize
+    # proc [Proc]
+    def initialize(proc)
       @sock = nil # Ractor
+      @proc = proc
       @streams_ctx = StreamsContext.new
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
@@ -164,7 +166,7 @@ module Biryani
       return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
 
-      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS])
+      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS], @proc)
       return [obj] if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
 
       ctx = obj
@@ -241,17 +243,18 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     # @param stream_id [Integer]
     # @param max_streams [Integer]
+    # @param proc [Proc]
     #
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
-    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams)
+    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, proc)
       ctx = streams_ctx[stream_id]
       return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'new stream identifier is less than the existing stream identifiers') if ctx.nil? && streams_ctx.last_stream_id > stream_id
 
-      ctx = streams_ctx.new_context(stream_id) if ctx.nil?
+      ctx = streams_ctx.new_context(stream_id, proc) if ctx.nil?
       obj = ctx.state.transition!(recv_frame, :recv)
       return obj if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
 

@@ -5,10 +5,11 @@ module Biryani
     end
 
     # @param stream_id [Integer]
+    # @param proc [Proc]
     #
     # @return [StreamContext]
-    def new_context(stream_id)
-      ctx = StreamContext.new(stream_id)
+    def new_context(stream_id, proc)
+      ctx = StreamContext.new(stream_id, proc)
       @h[stream_id] = ctx
       ctx
     end
@@ -59,9 +60,10 @@ module Biryani
     attr_accessor :stream, :tx, :send_window, :recv_window, :fragment, :content, :state
 
     # @param stream_id [Integer]
-    def initialize(stream_id)
+    # @param proc [Proc]
+    def initialize(stream_id, proc)
       @tx = Ractor::Port.new
-      @stream = Stream.new(@tx, stream_id)
+      @stream = Stream.new(@tx, stream_id, proc)
       @send_window = Window.new
       @recv_window = Window.new
       @fragment = StringIO.new
