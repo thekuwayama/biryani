@@ -10,6 +10,11 @@ module Biryani
       @fields = fields
       @content = content
     end
+
+    # @return [HTTPResponse]
+    def self.internal_error
+      HTTPResponse.new(500, {}, 'Internal Server Error')
+    end
   end
 
   class HTTPResponseParser
