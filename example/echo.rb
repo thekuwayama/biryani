@@ -17,8 +17,6 @@ server = Biryani::Server.new(
                   else
                     ''
                   end
-
-    res
   end
 )
 server.run(socket)

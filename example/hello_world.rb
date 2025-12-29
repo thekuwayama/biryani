@@ -12,7 +12,6 @@ server = Biryani::Server.new(
   Ractor.shareable_proc do |_, res|
     res.status = 200
     res.content = 'Hello, world!'
-    res
   end
 )
 server.run(socket)

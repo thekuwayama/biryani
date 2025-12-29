@@ -10,12 +10,7 @@ module Biryani
         req = Ractor.receive
         res = HTTPResponse.new(0, {}, '')
 
-        begin
-          proc.call(req, res)
-        rescue StandardError
-          tx << HTTPResponse.internal_error
-        end
-
+        proc.call(req, res)
         tx << [res, stream_id]
       end
     end
