@@ -17,5 +17,5 @@ server = Biryani::Server.new(
 )
 server.run(socket)
 
-# $ bundle exec ruby example/server.rb
+# $ bundle exec ruby example/hello_world.rb
 # $ curl -v --http2-prior-knowledge http://localhost:8888

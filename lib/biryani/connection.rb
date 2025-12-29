@@ -393,6 +393,7 @@ module Biryani
     #
     # @return [nil, ConnectionError]
     def self.handle_connection_window_update(window_update, send_window)
+      # TODO: send WINDOW_UPDATE
       send_window.increase!(window_update.window_size_increment)
       nil
     end
