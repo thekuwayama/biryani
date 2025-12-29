@@ -10,8 +10,8 @@ RSpec.describe DataBuffer do
     end
     let(:streams_ctx1) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1)
-      streams_ctx.new_context(2)
+      streams_ctx.new_context(1, do_nothing_proc)
+      streams_ctx.new_context(2, do_nothing_proc)
       streams_ctx
     end
     it 'should take' do
@@ -32,8 +32,8 @@ RSpec.describe DataBuffer do
     end
     let(:streams_ctx2) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1)
-      streams_ctx.new_context(2)
+      streams_ctx.new_context(1, do_nothing_proc)
+      streams_ctx.new_context(2, do_nothing_proc)
       streams_ctx
     end
     it 'should take' do
@@ -56,8 +56,8 @@ RSpec.describe DataBuffer do
     end
     let(:streams_ctx3) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1)
-      streams_ctx.new_context(2)
+      streams_ctx.new_context(1, do_nothing_proc)
+      streams_ctx.new_context(2, do_nothing_proc)
       streams_ctx
     end
     it 'should take' do
@@ -81,9 +81,9 @@ RSpec.describe DataBuffer do
     end
     let(:streams_ctx4) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1)
+      streams_ctx.new_context(1, do_nothing_proc)
       streams_ctx[1].send_window.consume!(2**16 - 1)
-      streams_ctx.new_context(2)
+      streams_ctx.new_context(2, do_nothing_proc)
       streams_ctx
     end
     it 'should take' do
@@ -109,8 +109,8 @@ RSpec.describe DataBuffer do
     end
     let(:streams_ctx5) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1)
-      streams_ctx.new_context(2)
+      streams_ctx.new_context(1, do_nothing_proc)
+      streams_ctx.new_context(2, do_nothing_proc)
       streams_ctx
     end
     it 'should take' do
