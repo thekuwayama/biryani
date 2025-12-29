@@ -411,7 +411,7 @@ module Biryani
     # @param content [String]
     # @param decoder [Decoder]
     #
-    # @return [Net::HTTPRequest, ConnectionError]
+    # @return [HTTPRequest, ConnectionError]
     def self.http_request(fragment, content, decoder)
       obj = decoder.decode(fragment)
       return obj if obj.is_a?(ConnectionError)
@@ -424,18 +424,15 @@ module Biryani
       builder.build(content)
     end
 
-    # @param status [Integer]
-    # @param h [Hash]
-    # @param s [String]
+    # @param res [HTTPResponse]
     # @param stream_id [Integer]
+    # @param encoder [Encoder]
     # @param max_frame_size [Integer]
     #
     # @return [Array<Object>] frames
-    # rubocop: disable Metrics/ParameterLists
-    def self.http_response(status, h, s, stream_id, encoder, max_frame_size)
-      HTTPResponseParser.new(status, h, s, stream_id).parse(encoder, max_frame_size)
+    def self.http_response(res, stream_id, encoder, max_frame_size)
+      HTTPResponseParser.new(res).parse(stream_id, encoder, max_frame_size)
     end
-    # rubocop: enable Metrics/ParameterLists
 
     # @return [Hash<Integer, Integer>]
     def self.default_settings

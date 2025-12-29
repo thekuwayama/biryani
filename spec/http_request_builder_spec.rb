@@ -20,7 +20,7 @@ RSpec.describe HTTPRequestBuilder do
 
   context 'http_request' do
     it 'should build' do
-      expect(HTTPRequestBuilder.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of Net::HTTP::Get
+      expect(HTTPRequestBuilder.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of HTTPRequest
     end
     it 'should not build' do
       expect(HTTPRequestBuilder.http_request({ ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of ConnectionError
@@ -39,7 +39,7 @@ RSpec.describe HTTPRequestBuilder do
       builder.build('')
     end
     it 'should field' do
-      expect(request.fetch('cookie')).to eq 'a=1; b=2; c=3; d=4'
+      expect(request.fields['cookie']).to eq 'a=1; b=2; c=3; d=4'
     end
   end
 end

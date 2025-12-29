@@ -8,7 +8,7 @@ module Biryani
       @rx = Ractor.new(tx, stream_id) do |tx, stream_id|
         _ = Ractor.receive
 
-        tx << [200, {}, 'Hello, world!', stream_id]
+        tx << [HTTPResponse.new(200, {}, 'Hello, world!'), stream_id]
       end
     end
   end
