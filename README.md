@@ -42,6 +42,11 @@ server = Biryani::Server.new(
 server.run(socket)
 ```
 
+```sh-session
+$ curl --http2-prior-knowledge http://localhost:8888
+Hello, world!
+```
+
 
 ## License
 
