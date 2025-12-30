@@ -90,7 +90,7 @@ module Biryani
             end
           end
         else
-          self.class.http_response(*obj, @encoder, @send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
+          self.class.http_response(*obj, @encoder, @recv_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
             close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
           end
 
