@@ -7,11 +7,12 @@ module Biryani
     # @param proc [Proc]
     def initialize(tx, stream_id, proc)
       @rx = Ractor.new(tx, stream_id, proc) do |tx, stream_id, proc|
-        req = Ractor.receive
-        res = HTTPResponse.new(0, {}, '')
+        unless (req = Ractor.recv).nil?
+          res = HTTPResponse.new(0, {}, '')
 
-        proc.call(req, res)
-        tx << [res, stream_id]
+          proc.call(req, res)
+          tx << [res, stream_id]
+        end
       end
     end
   end

@@ -287,7 +287,7 @@ module Biryani
     def self.clear_all_streams(streams_ctx)
       streams_ctx.each do |ctx|
         ctx.tx.close
-        ctx.stream.rx.close
+        ctx.stream.rx << nil
         ctx.fragment.close
         ctx.content.close
       end
@@ -309,7 +309,7 @@ module Biryani
       closed_ids = streams_ctx.closed_stream_ids.filter { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
         streams_ctx[id].tx.close
-        streams_ctx[id].stream.rx.close
+        streams_ctx[id].stream.rx << nil
         streams_ctx[id].fragment.close
         streams_ctx[id].content.close
       end

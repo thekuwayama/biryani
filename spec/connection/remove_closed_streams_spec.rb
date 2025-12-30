@@ -27,9 +27,8 @@ RSpec.describe Connection do
       DataBuffer.new
     end
     it 'should close' do
-      # TODO: Ractor::Error: closing port by other ractors is not allowed
-      # Connection.remove_closed_streams(streams_ctx2, data_buffer2)
-      expect(streams_ctx2.length).to eq 2
+      Connection.remove_closed_streams(streams_ctx2, data_buffer2)
+      expect(streams_ctx2.length).to eq 2 # remain stream_id
     end
 
     let(:streams_ctx3) do
