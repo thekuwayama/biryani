@@ -47,7 +47,6 @@ module Biryani
     rescue StandardError
       self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
-      self.class.close_all_streams(@streams_ctx)
       io&.close_write
     end
 
@@ -95,11 +94,13 @@ module Biryani
             close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
           end
 
-          self.class.delete_streams(@streams_ctx, @data_buffer)
+          self.class.remove_closed_streams(@streams_ctx, @data_buffer)
         end
 
         break if closed?
       end
+    ensure
+      self.class.clear_all_streams(@streams_ctx)
     end
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/BlockLength
@@ -283,20 +284,34 @@ module Biryani
     end
 
     # @param streams_ctx [StreamsContext]
+    def self.clear_all_streams(streams_ctx)
+      streams_ctx.each do |ctx|
+        ctx.tx.close
+        ctx.stream.rx.close
+        ctx.fragment.close
+        ctx.content.close
+      end
+    end
+
+    # @param streams_ctx [StreamsContext]
     def self.close_all_streams(streams_ctx)
       streams_ctx.each do |ctx|
         ctx.tx.close
+        ctx.fragment.close
+        ctx.content.close
+        ctx.state.close
       end
     end
 
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
-    def self.delete_streams(streams_ctx, data_buffer)
-      closed_ids = streams_ctx.closed_stream_ids
-      closed_ids.filter! { |id| !data_buffer.has?(id) }
+    def self.remove_closed_streams(streams_ctx, data_buffer)
+      closed_ids = streams_ctx.closed_stream_ids.filter { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
         streams_ctx[id].tx.close
-        streams_ctx.delete(id)
+        streams_ctx[id].stream.rx.close
+        streams_ctx[id].fragment.close
+        streams_ctx[id].content.close
       end
     end
 
