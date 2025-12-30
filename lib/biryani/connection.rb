@@ -74,8 +74,8 @@ module Biryani
         ports << @sock
         next if ports.empty?
 
-        port_, obj = Ractor.select(*ports)
-        if port_ == @sock
+        port, obj = Ractor.select(*ports)
+        if port == @sock
           if obj.is_a?(ConnectionError) || obj.is_a?(StreamError)
             reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
