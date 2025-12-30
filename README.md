@@ -1,5 +1,6 @@
 # biryani
 
+[![Gem Version](https://badge.fury.io/rb/biryani.svg)](https://badge.fury.io/rb/biryani)
 [![Actions Status](https://github.com/thekuwayama/biryani/actions/workflows/ci.yml/badge.svg)](https://github.com/thekuwayama/biryani/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE.txt)
 
@@ -9,15 +10,16 @@
 - https://datatracker.ietf.org/doc/rfc7541/
 
 
-## Getting started
+## Installation
 
-You can install with:
+The gem is available at [rubygems.org](https://rubygems.org/gems/biryani). You can install it the following:
 
 ```sh-session
-$ gem install specific_install
-
-$ gem specific_install git@github.com:thekuwayama/biryani.git
+$ gem install biryani
 ```
+
+
+## Usage
 
 This implementation intentionally provides a minimal API and delegates application-level responsibilities to your code.
 Roughly, it works as follows:
