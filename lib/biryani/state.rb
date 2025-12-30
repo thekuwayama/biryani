@@ -213,7 +213,7 @@ module Biryani
 
     # @return [Boolean]
     def active?
-      @state == :open || @state == :half_closed_local || @state == :half_closed_remote
+      !%i[idle reserved_local reserved_remote closed].include?(@state)
     end
 
     # @return [Boolean]
