@@ -8,7 +8,7 @@ module Biryani
     # @param direction [:send, :recv]
     def transition!(frame, direction)
       obj = self.class.next(@state, frame, direction)
-      return obj if obj.is_a?(ConnectionError)
+      return obj if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
 
       @state = obj
     end
