@@ -1,7 +1,7 @@
 require_relative '../spec_helper'
 
 RSpec.describe Connection do
-  context 'delete_streams' do
+  context 'remove_closed_streams' do
     let(:streams_ctx1) do
       streams_ctx = StreamsContext.new
       streams_ctx.new_context(1, do_nothing_proc)
@@ -12,7 +12,7 @@ RSpec.describe Connection do
       DataBuffer.new
     end
     it 'should close' do
-      Connection.delete_streams(streams_ctx1, data_buffer1)
+      Connection.remove_closed_streams(streams_ctx1, data_buffer1)
       expect(streams_ctx1.length).to eq 2
     end
 
@@ -27,8 +27,8 @@ RSpec.describe Connection do
       DataBuffer.new
     end
     it 'should close' do
-      Connection.delete_streams(streams_ctx2, data_buffer2)
-      expect(streams_ctx2.length).to eq 1
+      Connection.remove_closed_streams(streams_ctx2, data_buffer2)
+      expect(streams_ctx2.length).to eq 2 # remain stream_id
     end
 
     let(:streams_ctx3) do
@@ -44,7 +44,7 @@ RSpec.describe Connection do
       data_buffer
     end
     it 'should close' do
-      Connection.delete_streams(streams_ctx3, data_buffer3)
+      Connection.remove_closed_streams(streams_ctx3, data_buffer3)
       expect(streams_ctx3.length).to eq 2
     end
   end
