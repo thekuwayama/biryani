@@ -27,8 +27,8 @@ module Biryani
       @send_window = Window.new
       @recv_window = Window.new
       @data_buffer = DataBuffer.new
-      @send_settings = self.class.default_settings # Hash<Integer, Integer>
-      @recv_settings = self.class.default_settings # Hash<Integer, Integer>
+      @settings = self.class.default_settings # Hash<Integer, Integer>
+      @peer_settings = self.class.default_settings # Hash<Integer, Integer>
       @closed = false
     end
 
@@ -79,7 +79,7 @@ module Biryani
             reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state_send(reply_frame, @streams_ctx)
-          elsif obj.length > @send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+          elsif obj.length > @settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
             self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
           else
@@ -90,7 +90,7 @@ module Biryani
             end
           end
         else
-          self.class.http_response(*obj, @encoder, @recv_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
+          self.class.http_response(*obj, @encoder, @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
             close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
           end
 
@@ -128,7 +128,7 @@ module Biryani
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
-        obj = self.class.handle_settings(frame, @send_settings, @decoder)
+        obj = self.class.handle_settings(frame, @peer_settings, @decoder)
         return [] if obj.nil?
 
         settings_ack = obj
@@ -167,7 +167,7 @@ module Biryani
       return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
 
-      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS], @proc)
+      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @peer_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS], @proc)
       return [obj] if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
 
       ctx = obj
@@ -375,15 +375,15 @@ module Biryani
     end
 
     # @param settings [Settings]
-    # @param send_settings [Hash<Integer, Integer>]
+    # @param peer_settings [Hash<Integer, Integer>]
     # @param decoder [Decoder]
     #
     # @return [Settings]
-    def self.handle_settings(settings, send_settings, decoder)
+    def self.handle_settings(settings, peer_settings, decoder)
       return nil if settings.ack?
 
-      send_settings.merge!(settings.setting)
-      decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
+      peer_settings.merge!(settings.setting)
+      decoder.limit!(peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
       Frame::Settings.new(true, 0, {})
     end
 
