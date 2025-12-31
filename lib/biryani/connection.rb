@@ -419,6 +419,7 @@ module Biryani
     # @param settings [Settings]
     # @param peer_settings [Hash<Integer, Integer>]
     # @param decoder [Decoder]
+    # @param streams_ctx [StreamsContext]
     #
     # @return [Settings]
     def self.handle_settings(settings, peer_settings, decoder, streams_ctx)
