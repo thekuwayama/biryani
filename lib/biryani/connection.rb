@@ -132,7 +132,7 @@ module Biryani
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
-        obj = self.class.handle_settings(frame, @peer_settings, @decoder)
+        obj = self.class.handle_settings(frame, @peer_settings, @decoder, @streams_ctx)
         return [] if obj.nil?
 
         settings_ack = obj
@@ -421,11 +421,17 @@ module Biryani
     # @param decoder [Decoder]
     #
     # @return [Settings]
-    def self.handle_settings(settings, peer_settings, decoder)
+    def self.handle_settings(settings, peer_settings, decoder, streams_ctx)
       return nil if settings.ack?
 
       peer_settings.merge!(settings.setting)
-      decoder.limit!(peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
+      new_limit = peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]
+      decoder.limit!(new_limit)
+      send_initial_window_size = peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
+      streams_ctx.each do |ctx|
+        ctx.send_window.update!(send_initial_window_size)
+      end
+
       Frame::Settings.new(true, 0, {})
     end
 
