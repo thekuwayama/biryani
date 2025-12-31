@@ -20,7 +20,7 @@ module Biryani
 
     # @param initial_window_size [Integer]
     def update!(initial_window_size)
-      @length = initial_window_size - (@capacity - @length)
+      @length = initial_window_size - @capacity + @length
       @capacity = initial_window_size
     end
   end
