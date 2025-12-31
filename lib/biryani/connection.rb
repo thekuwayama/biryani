@@ -141,7 +141,8 @@ module Biryani
         obj = self.class.handle_ping(frame)
         return [] if obj.nil?
 
-        [obj]
+        ping_ack = obj
+        [ping_ack]
       when FrameType::GOAWAY
         self.class.handle_goaway(frame)
         # TODO: logging error
@@ -438,7 +439,7 @@ module Biryani
 
     # @param ping [Ping]
     #
-    # @return [Ping, nil, ConnectionError]
+    # @return [Ping, nil]
     def self.handle_ping(ping)
       Frame::Ping.new(true, 0, ping.opaque) unless ping.ack?
     end
