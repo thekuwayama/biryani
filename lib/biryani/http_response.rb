@@ -34,28 +34,12 @@ module Biryani
       @res.content
     end
 
-    # @param stream_id [Integer]
     # @param encoder [Encoder]
-    # @param max_frame_size [Integer]
     #
-    # @return [Array<Object>] frames
-    def parse(stream_id, encoder, max_frame_size)
-      fragment = encoder.encode(fields)
-      len = (fragment.bytesize + max_frame_size - 1) / max_frame_size
-      frames = fragment.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
-        if index.zero?
-          Frame::Headers.new(len < 2, content.empty?, stream_id, nil, nil, s, nil)
-        else
-          Frame::Continuation.new(index == len - 1, stream_id, s)
-        end
-      end
-
-      len = (content.bytesize + max_frame_size - 1) / max_frame_size
-      frames += content.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
-        Frame::Data.new(index == len - 1, stream_id, s, nil)
-      end
-
-      frames
+    # @return [String] fragment
+    # @return [String] data
+    def parse(encoder)
+      [encoder.encode(fields), content]
     end
   end
 end
