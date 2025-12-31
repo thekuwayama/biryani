@@ -6,7 +6,7 @@ RSpec.describe Connection do
       Frame::WindowUpdate.new(0, 1000)
     end
     let(:send_window) do
-      Window.new
+      Window.new(65_535)
     end
     it 'should handle' do
       expect { Connection.handle_connection_window_update(window_update, send_window) }.not_to raise_error

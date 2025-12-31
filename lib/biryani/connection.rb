@@ -24,11 +24,11 @@ module Biryani
       @streams_ctx = StreamsContext.new
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
-      @send_window = Window.new
-      @recv_window = Window.new
+      @send_window = Window.new(65_535)
+      @recv_window = Window.new(65_535)
       @data_buffer = DataBuffer.new
-      @send_settings = self.class.default_settings # Hash<Integer, Integer>
-      @recv_settings = self.class.default_settings # Hash<Integer, Integer>
+      @settings = self.class.default_settings # Hash<Integer, Integer>
+      @peer_settings = self.class.default_settings # Hash<Integer, Integer>
       @closed = false
     end
 
@@ -66,6 +66,7 @@ module Biryani
     # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/BlockLength
     # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/MethodLength
     # rubocop: disable Metrics/PerceivedComplexity
     def send_loop(io)
       loop do
@@ -79,7 +80,7 @@ module Biryani
             reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state_send(reply_frame, @streams_ctx)
-          elsif obj.length > @send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+          elsif obj.length > @settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
             self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
           else
@@ -90,9 +91,11 @@ module Biryani
             end
           end
         else
-          self.class.http_response(*obj, @encoder, @recv_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).each do |send_frame|
-            close if self.class.send(io, send_frame, @send_window, @streams_ctx, @data_buffer)
-          end
+          res, stream_id = obj
+          fragment, data = self.class.http_response(res, @encoder)
+          max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+          self.class.send_headers(io, stream_id, fragment, data.empty?, max_frame_size, @streams_ctx)
+          self.class.send_data(io, stream_id, data, @send_window, max_frame_size, @streams_ctx, @data_buffer) unless data.empty?
 
           self.class.remove_closed_streams(@streams_ctx, @data_buffer)
         end
@@ -105,6 +108,7 @@ module Biryani
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/BlockLength
     # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/MethodLength
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @param frame [Object]
@@ -128,7 +132,7 @@ module Biryani
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
-        obj = self.class.handle_settings(frame, @send_settings, @decoder)
+        obj = self.class.handle_settings(frame, @peer_settings, @decoder)
         return [] if obj.nil?
 
         settings_ack = obj
@@ -146,7 +150,8 @@ module Biryani
         err = self.class.handle_connection_window_update(frame, @send_window)
         return [err] unless err.nil?
 
-        @data_buffer.take!(@send_window, @streams_ctx)
+        max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+        @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
       else
         # ignore unknown frame type
         []
@@ -167,12 +172,16 @@ module Biryani
       return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
 
-      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, @send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS], @proc)
+      max_streams = @peer_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]
+      send_initial_window_size = @peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
+      recv_initial_window_size = @settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
+      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size, @proc)
       return [obj] if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
 
       ctx = obj
       case typ
       when FrameType::DATA
+        # TODO: flow-control using @recv_window & ctx.recv_window
         ctx.content << frame.data
         if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
@@ -205,7 +214,8 @@ module Biryani
         err = self.class.handle_stream_window_update(frame, @streams_ctx)
         return [err] unless err.nil?
 
-        @data_buffer.take!(@send_window, @streams_ctx)
+        max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+        @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
       else
         # ignore UNKNOWN Frame
         []
@@ -244,24 +254,28 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     # @param stream_id [Integer]
     # @param max_streams [Integer]
+    # @param send_initial_window_size [Integer]
+    # @param recv_initial_window_size [Integer]
     # @param proc [Proc]
     #
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/ParameterLists
     # rubocop: disable Metrics/PerceivedComplexity
-    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, proc)
+    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size, proc)
       ctx = streams_ctx[stream_id]
       return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'new stream identifier is less than the existing stream identifiers') if ctx.nil? && streams_ctx.last_stream_id > stream_id
 
-      ctx = streams_ctx.new_context(stream_id, proc) if ctx.nil?
+      ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size, proc) if ctx.nil?
       obj = ctx.state.transition!(recv_frame, :recv)
       return obj if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
 
       ctx
     end
     # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/ParameterLists
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @param send_frame [Object]
@@ -324,39 +338,73 @@ module Biryani
     end
 
     # @param io [IO]
-    # @param frame [Object]
+    # @param stream_id [Integer]
+    # @param data [String]
     # @param send_window [Window]
+    # @param max_frame_size [Integer]
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
-    #
-    # @return [Boolean] should close connection?
-    def self.send(io, frame, send_window, streams_ctx, data_buffer)
-      if frame.f_type != FrameType::DATA
+    # rubocop: disable Metrics/ParameterLists
+    def self.send_data(io, stream_id, data, send_window, max_frame_size, streams_ctx, data_buffer)
+      frames, remains = sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+
+      frames.each do |frame|
         do_send(io, frame, false)
-        return transition_state_send(frame, streams_ctx)
+        send_window.consume!(frame.length)
+        streams_ctx[stream_id].send_window.consume!(frame.length)
+        transition_state_send(frame, streams_ctx)
       end
 
-      data = frame
-      if sendable?(data, send_window, streams_ctx)
-        do_send(io, data, false)
-        send_window.consume!(data.length)
-        streams_ctx[data.stream_id].send_window.consume!(data.length)
-        return transition_state_send(frame, streams_ctx)
-      end
-
-      data_buffer << data
-      false
+      data_buffer.store(stream_id, remains) unless remains.empty?
     end
+    # rubocop: enable Metrics/ParameterLists
 
-    # @param data [Data]
+    # @param io [IO]
+    # @param stream_id [Integer]
+    # @param fragment [String]
+    # @param only_headers [Boolean]
+    # @param max_frame_size [Integer]
+    # @param streams_ctx [StreamsContext]
+    # rubocop: disable Metrics/ParameterLists
+    def self.send_headers(io, stream_id, fragment, only_headers, max_frame_size, streams_ctx)
+      len = (fragment.bytesize + max_frame_size - 1) / max_frame_size
+      frames = fragment.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
+        end_headers = index == len - 1
+        if index.zero?
+          Frame::Headers.new(end_headers, only_headers, stream_id, nil, nil, s, nil)
+        else
+          Frame::Continuation.new(end_headers, stream_id, s)
+        end
+      end
+
+      frames.each do |frame|
+        do_send(io, frame, false)
+        transition_state_send(frame, streams_ctx)
+      end
+    end
+    # rubocop: enable Metrics/ParameterLists
+
+    # @param data [String]
+    # @param stream_id [Integer]
     # @param send_window [Window]
+    # @param max_frame_size [Integer]
     # @param streams_ctx [StreamsContext]
     #
-    # @return [Boolean]
-    def self.sendable?(data, send_window, streams_ctx)
-      length = data.length
-      stream_id = data.stream_id
-      send_window.available?(length) && streams_ctx[stream_id].send_window.available?(length)
+    # @return [Array<Object>] frames
+    # @return [String]
+    def self.sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+      len = [data.bytesize, send_window.length, streams_ctx[stream_id].send_window.length].min
+
+      payload = data[0...len]
+      remains = data[len..] || ''
+
+      len = (len + max_frame_size - 1) / max_frame_size
+      frames = payload.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
+        end_stream = remains.empty? && index == len - 1
+        Frame::Data.new(end_stream, stream_id, s, nil)
+      end
+
+      [frames, remains]
     end
 
     # @param io [IO]
@@ -375,15 +423,15 @@ module Biryani
     end
 
     # @param settings [Settings]
-    # @param send_settings [Hash<Integer, Integer>]
+    # @param peer_settings [Hash<Integer, Integer>]
     # @param decoder [Decoder]
     #
     # @return [Settings]
-    def self.handle_settings(settings, send_settings, decoder)
+    def self.handle_settings(settings, peer_settings, decoder)
       return nil if settings.ack?
 
-      send_settings.merge!(settings.setting)
-      decoder.limit!(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
+      peer_settings.merge!(settings.setting)
+      decoder.limit!(peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE])
       Frame::Settings.new(true, 0, {})
     end
 
@@ -402,7 +450,7 @@ module Biryani
     #
     # @return [nil, ConnectionError]
     def self.handle_connection_window_update(window_update, send_window)
-      # TODO: send WINDOW_UPDATE
+      # TODO: send WINDOW_UPDATE to do the flow-conrol
       send_window.increase!(window_update.window_size_increment)
       nil
     end
@@ -438,13 +486,12 @@ module Biryani
     end
 
     # @param res [HTTPResponse]
-    # @param stream_id [Integer]
     # @param encoder [Encoder]
-    # @param max_frame_size [Integer]
     #
-    # @return [Array<Object>] frames
-    def self.http_response(res, stream_id, encoder, max_frame_size)
-      HTTPResponseParser.new(res).parse(stream_id, encoder, max_frame_size)
+    # @return [String] fragment
+    # @return [String] data
+    def self.http_response(res, encoder)
+      HTTPResponseParser.new(res).parse(encoder)
     end
 
     # @return [Hash<Integer, Integer>]

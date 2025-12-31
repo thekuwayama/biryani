@@ -5,11 +5,13 @@ module Biryani
     end
 
     # @param stream_id [Integer]
+    # @param send_initial_window_size [Integer]
+    # @param recv_initial_window_size [Integer]
     # @param proc [Proc]
     #
     # @return [StreamContext]
-    def new_context(stream_id, proc)
-      ctx = StreamContext.new(stream_id, proc)
+    def new_context(stream_id, send_initial_window_size, recv_initial_window_size, proc)
+      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, proc)
       @h[stream_id] = ctx
       ctx
     end
@@ -60,12 +62,14 @@ module Biryani
     attr_accessor :stream, :tx, :send_window, :recv_window, :fragment, :content, :state
 
     # @param stream_id [Integer]
+    # @param send_initial_window_size [Integer]
+    # @param recv_initial_window_size [Integer]
     # @param proc [Proc]
-    def initialize(stream_id, proc)
+    def initialize(stream_id, send_initial_window_size, recv_initial_window_size, proc)
       @tx = Ractor::Port.new
       @stream = Stream.new(@tx, stream_id, proc)
-      @send_window = Window.new
-      @recv_window = Window.new
+      @send_window = Window.new(send_initial_window_size)
+      @recv_window = Window.new(recv_initial_window_size)
       @fragment = StringIO.new
       @content = StringIO.new
       @state = State.new

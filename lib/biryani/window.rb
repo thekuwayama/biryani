@@ -1,7 +1,8 @@
 module Biryani
   class Window
-    def initialize
-      @window = 2**16 - 1
+    # @param initial_window_size [Integer]
+    def initialize(initial_window_size)
+      @window = initial_window_size
     end
 
     # @param length [Integer]

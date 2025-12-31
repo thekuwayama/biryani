@@ -1,30 +1,40 @@
 module Biryani
   class DataBuffer
     def initialize
-      @buffer = [] # Array<Data>
+      @buffer = {} # Hash<Integer, String>
     end
 
-    # @param data [Data]
-    def <<(data)
-      @buffer << data
+    # @param stream_id [Integer]
+    # @param data [String]
+    def store(stream_id, data)
+      @buffer[stream_id] = '' unless @buffer.key?(stream_id)
+      @buffer[stream_id] += data
     end
 
     # @param send_window [Window]
-    # @param stream_ctxs [Hash<Integer, StreamContext>]
+    # @param streams_ctx [StreamsContext]
+    # @param max_frame_size [Intger]
     #
-    # @return [Array<Data>]
-    def take!(send_window, stream_ctxs)
-      datas = {}
-      @buffer.each_with_index.each do |data, i|
-        next unless Connection.sendable?(data, send_window, stream_ctxs)
+    # @return [Array<Object>] frames
+    def take!(send_window, streams_ctx, max_frame_size)
+      datas = []
+      @buffer.each do |stream_id, data|
+        frames, remains = Connection.sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+        next if frames.empty?
 
-        send_window.consume!(data.length)
-        stream_ctxs[data.stream_id].send_window.consume!(data.length)
-        datas[i] = data
+        datas += frames
+        if remains.empty?
+          @buffer.delete(stream_id)
+        else
+          @buffer[stream_id] = remains
+        end
+
+        len = frames.map(&:length).sum
+        send_window.consume!(len)
+        streams_ctx[stream_id].send_window.consume!(len)
       end
 
-      @buffer = @buffer.each_with_index.filter { |_, i| datas.keys.include?(i) }.map(&:first)
-      datas.values
+      datas
     end
 
     # @return [Integer]
@@ -36,7 +46,7 @@ module Biryani
     #
     # @return [Boolean]
     def has?(stream_id)
-      @buffer.filter { |data| data.stream_id == stream_id }.any?
+      @buffer.key?(stream_id)
     end
   end
 end
