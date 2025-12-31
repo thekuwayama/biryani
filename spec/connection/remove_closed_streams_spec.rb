@@ -4,8 +4,8 @@ RSpec.describe Connection do
   context 'remove_closed_streams' do
     let(:streams_ctx1) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, do_nothing_proc)
-      streams_ctx.new_context(2, do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
+      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
       streams_ctx
     end
     let(:data_buffer1) do
@@ -18,8 +18,8 @@ RSpec.describe Connection do
 
     let(:streams_ctx2) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, do_nothing_proc)
-      streams_ctx.new_context(2, do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
+      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
       streams_ctx[2].state.close
       streams_ctx
     end
@@ -33,14 +33,14 @@ RSpec.describe Connection do
 
     let(:streams_ctx3) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, do_nothing_proc)
-      streams_ctx.new_context(2, do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
+      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
       streams_ctx[2].state.close
       streams_ctx
     end
     let(:data_buffer3) do
       data_buffer = DataBuffer.new
-      data_buffer << Frame::Data.new(false, 2, 'two', nil)
+      data_buffer.store(2, 'two')
       data_buffer
     end
     it 'should close' do

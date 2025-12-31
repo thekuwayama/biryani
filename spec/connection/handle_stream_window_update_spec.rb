@@ -7,8 +7,8 @@ RSpec.describe Connection do
     end
     let(:streams_ctx) do
       streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, do_nothing_proc)
-      streams_ctx.new_context(2, do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
+      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
       streams_ctx
     end
     it 'should handle' do
