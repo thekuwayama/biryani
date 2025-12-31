@@ -150,7 +150,8 @@ module Biryani
         err = self.class.handle_connection_window_update(frame, @send_window)
         return [err] unless err.nil?
 
-        @data_buffer.take!(@send_window, @streams_ctx, @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE])
+        max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+        @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
       else
         # ignore unknown frame type
         []
