@@ -6,13 +6,6 @@ module Biryani
     end
 
     # @param length [Integer]
-    #
-    # @return [Boolean]
-    def available?(length)
-      @window > length
-    end
-
-    # @param length [Integer]
     def consume!(length)
       @window -= length
     end
