@@ -17,6 +17,9 @@ Metrics/ClassLength:
 Metrics/MethodLength:
   Max: 30
 
+Metrics/ParameterLists:
+  Max: 7
+
 Naming/MethodParameterName:
   MinNameLength: 1
 

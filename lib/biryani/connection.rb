@@ -260,7 +260,6 @@ module Biryani
     #
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
-    # rubocop: disable Metrics/ParameterLists
     # rubocop: disable Metrics/PerceivedComplexity
     def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size, proc)
       ctx = streams_ctx[stream_id]
@@ -275,7 +274,6 @@ module Biryani
       ctx
     end
     # rubocop: enable Metrics/CyclomaticComplexity
-    # rubocop: enable Metrics/ParameterLists
     # rubocop: enable Metrics/PerceivedComplexity
 
     # @param send_frame [Object]
@@ -344,7 +342,6 @@ module Biryani
     # @param max_frame_size [Integer]
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
-    # rubocop: disable Metrics/ParameterLists
     def self.send_data(io, stream_id, data, send_window, max_frame_size, streams_ctx, data_buffer)
       frames, remains = sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
 
@@ -357,7 +354,6 @@ module Biryani
 
       data_buffer.store(stream_id, remains) unless remains.empty?
     end
-    # rubocop: enable Metrics/ParameterLists
 
     # @param io [IO]
     # @param stream_id [Integer]
@@ -365,7 +361,6 @@ module Biryani
     # @param only_headers [Boolean]
     # @param max_frame_size [Integer]
     # @param streams_ctx [StreamsContext]
-    # rubocop: disable Metrics/ParameterLists
     def self.send_headers(io, stream_id, fragment, only_headers, max_frame_size, streams_ctx)
       len = (fragment.bytesize + max_frame_size - 1) / max_frame_size
       frames = fragment.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
@@ -382,7 +377,6 @@ module Biryani
         transition_state_send(frame, streams_ctx)
       end
     end
-    # rubocop: enable Metrics/ParameterLists
 
     # @param data [String]
     # @param stream_id [Integer]

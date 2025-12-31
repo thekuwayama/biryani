@@ -10,7 +10,6 @@ module Biryani
       # @param weight [Integer, nil]
       # @param fragment [String]
       # @param padding [String, nil]
-      # rubocop: disable Metrics/ParameterLists
       def initialize(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)
         @f_type = FrameType::HEADERS
         @end_headers = end_headers
@@ -21,7 +20,6 @@ module Biryani
         @fragment = fragment
         @padding = padding
       end
-      # rubocop: enable Metrics/ParameterLists
 
       # @return [Boolean]
       def priority?
