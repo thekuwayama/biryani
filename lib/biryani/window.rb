@@ -1,23 +1,27 @@
 module Biryani
   class Window
+    attr_reader :length
+
     # @param initial_window_size [Integer]
     def initialize(initial_window_size)
-      @window = initial_window_size
+      @length = initial_window_size
+      @capacity = initial_window_size
     end
 
     # @param length [Integer]
     def consume!(length)
-      @window -= length
+      @length -= length
     end
 
     # @param length [Integer]
     def increase!(length)
-      @window += length
+      @length += length
     end
 
-    # @return [Integer]
-    def length
-      @window
+    # @param initial_window_size [Integer]
+    def update!(initial_window_size)
+      @length = initial_window_size - @capacity + @length
+      @capacity = initial_window_size
     end
   end
 end
