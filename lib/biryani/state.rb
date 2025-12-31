@@ -76,6 +76,8 @@ module Biryani
       # receiving_continuation_data
       in [:receiving_continuation_data, FrameType::RST_STREAM, _]
         :closed
+      in [:receiving_continuation_data, FrameType::WINDOW_UPDATE, :recv]
+        state
       in [:receiving_continuation_data, FrameType::CONTINUATION, :recv] if frame.end_headers?
         :receiving_data
       in [:receiving_continuation_data, FrameType::CONTINUATION, :recv]
@@ -86,6 +88,8 @@ module Biryani
       # receiving_continuation
       in [:receiving_continuation, FrameType::RST_STREAM, _]
         :closed
+      in [:receiving_continuation, FrameType::WINDOW_UPDATE, :recv]
+        state
       in [:receiving_continuation, FrameType::CONTINUATION, :recv] if frame.end_headers?
         :half_closed_remote
       in [:receiving_continuation, FrameType::CONTINUATION, :recv]
@@ -96,6 +100,8 @@ module Biryani
       # receiving_data
       in [:receiving_data, FrameType::DATA, :recv] if frame.end_stream?
         :half_closed_remote
+      in [:receiving_data, FrameType::WINDOW_UPDATE, :recv]
+        state
       in [:receiving_data, FrameType::DATA, :recv]
         state
       in [:receiving_data, FrameType::RST_STREAM, _]
@@ -136,6 +142,8 @@ module Biryani
       # sending_continuation_data
       in [:sending_continuation_data, FrameType::RST_STREAM, :send]
         :closed
+      in [:sending_continuation_data, FrameType::WINDOW_UPDATE, :recv]
+        state
       in [:sending_continuation_data, FrameType::CONTINUATION, :send] if frame.end_headers?
         :sending_data
       in [:sending_continuation_data, FrameType::CONTINUATION, :send]
@@ -148,6 +156,8 @@ module Biryani
       # sending_continuation
       in [:sending_continuation, FrameType::RST_STREAM, :send]
         :closed
+      in [:sending_continuation, FrameType::WINDOW_UPDATE, :recv]
+        state
       in [:sending_continuation, FrameType::CONTINUATION, :send] if frame.end_headers?
         :closed
       in [:sending_continuation, FrameType::CONTINUATION, :send]
@@ -160,6 +170,8 @@ module Biryani
       # sending_data
       in [:sending_data, FrameType::DATA, :send] if frame.end_stream?
         :closed
+      in [:sending_data, FrameType::WINDOW_UPDATE, :recv]
+        state
       in [:sending_data, FrameType::DATA, :send]
         state
       in [:sending_data, FrameType::RST_STREAM, :send]

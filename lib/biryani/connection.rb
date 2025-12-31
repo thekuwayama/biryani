@@ -454,19 +454,20 @@ module Biryani
     def self.handle_connection_window_update(window_update, send_window)
       # TODO: send WINDOW_UPDATE to do the flow-conrol
       send_window.increase!(window_update.window_size_increment)
+      return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'flow-control window exceeds 2^31-1') if send_window.length > 2**31 - 1
+
       nil
     end
 
     # @param window_update [WindowUpdate]
     # @param streams_ctx [StreamsContext]
     #
-    # @return [nil, ConnectionError]
+    # @return [nil, StreamError]
     def self.handle_stream_window_update(window_update, streams_ctx)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'WINDOW_UPDATE invalid window size increment 0') if window_update.window_size_increment.zero?
-      return StreamError.new(ErrorCode::FLOW_CONTROL_ERROR, window_update.stream_id, 'WINDOW_UPDATE invalid window size increment greater than 2^31-1') \
-        if window_update.window_size_increment > 2**31 - 1
+      stream_id = window_update.stream_id
+      streams_ctx[stream_id].send_window.increase!(window_update.window_size_increment)
+      return StreamError.new(ErrorCode::FLOW_CONTROL_ERROR, stream_id, 'flow-control window exceeds 2^31-1') if streams_ctx[stream_id].send_window.length > 2**31 - 1
 
-      streams_ctx[window_update.stream_id].send_window.increase!(window_update.window_size_increment)
       nil
     end
 
