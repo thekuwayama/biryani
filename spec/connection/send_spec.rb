@@ -25,10 +25,10 @@ RSpec.describe Connection do
       streams_ctx1[2].state.transition!(headers1, :recv)
       Connection.send_headers(io, 2, "\x88".b, false, 16_384, streams_ctx1)
       Connection.send_data(io, 2, 'Hello, world!'.b, send_window1, 16_384, streams_ctx1, data_buffer)
-      expect(io.string.force_encoding(Encoding::ASCII_8BIT)).to eq "\x00\x00\x01\x01\x04\x00\x00\x00\x02\x88\x00\x00\r\x00\x01\x00\x00\x00\x02Hello, world!".b
-      expect(send_window1.length).to eq 65_522
+      expect(io.string.force_encoding(Encoding::ASCII_8BIT)).to eq "\x00\x00\x01\x01\x04\x00\x00\x00\x02\x88\x00\x00\x0d\x00\x01\x00\x00\x00\x02Hello, world!".b
+      expect(send_window1.length).to eq 65_535 -13
       expect(streams_ctx1[1].send_window.length).to eq 65_535
-      expect(streams_ctx1[2].send_window.length).to eq 65_522
+      expect(streams_ctx1[2].send_window.length).to eq 65_535 - 13
       expect(data_buffer.length).to eq 0
     end
 

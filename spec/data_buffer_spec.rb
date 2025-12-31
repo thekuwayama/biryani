@@ -41,9 +41,9 @@ RSpec.describe DataBuffer do
       expect(datas.length).to eq 2
       expect(datas.map(&:stream_id)).to eq [1, 2]
       expect(datas.map(&:data)).to eq %w[one two]
-      expect(send_window2.length).to eq 65_529
-      expect(streams_ctx2[1].send_window.length).to eq 65_532
-      expect(streams_ctx2[2].send_window.length).to eq 65_532
+      expect(send_window2.length).to eq 65_535 - 6
+      expect(streams_ctx2[1].send_window.length).to eq 65_535 - 3
+      expect(streams_ctx2[2].send_window.length).to eq 65_535 - 3
     end
 
     let(:data_buffer3) do
@@ -65,9 +65,9 @@ RSpec.describe DataBuffer do
       expect(datas.length).to eq 1
       expect(datas.first.stream_id).to eq 2
       expect(datas.first.data).to eq 'two'
-      expect(send_window3.length).to eq 65_532
+      expect(send_window3.length).to eq 65_535 - 3
       expect(streams_ctx3[1].send_window.length).to eq 65_535
-      expect(streams_ctx3[2].send_window.length).to eq 65_532
+      expect(streams_ctx3[2].send_window.length).to eq 65_535 - 3
     end
 
     let(:data_buffer4) do
@@ -91,9 +91,9 @@ RSpec.describe DataBuffer do
       expect(datas.length).to eq 1
       expect(datas.first.stream_id).to eq 2
       expect(datas.first.data).to eq 'two'
-      expect(send_window4.length).to eq 65_532
+      expect(send_window4.length).to eq 65_535 - 3
       expect(streams_ctx4[1].send_window.length).to eq 0
-      expect(streams_ctx4[2].send_window.length).to eq 65_532
+      expect(streams_ctx4[2].send_window.length).to eq 65_535 - 3
     end
 
     let(:data_buffer5) do
