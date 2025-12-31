@@ -340,20 +340,12 @@ module Biryani
     # @param stream_id [Integer]
     # @param data [String]
     # @param send_window [Window]
+    # @param max_frame_size [Integer]
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
     # rubocop: disable Metrics/ParameterLists
     def self.send_data(io, stream_id, data, send_window, max_frame_size, streams_ctx, data_buffer)
-      len = sendable_length(data.bytesize, stream_id, send_window, streams_ctx)
-      payload = data[0...len]
-      remains = data[len..] || ''
-
-      len = (len + max_frame_size - 1) / max_frame_size
-      end_stream = false
-      frames = payload.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
-        end_stream = remains.empty? && index == len - 1
-        Frame::Data.new(end_stream, stream_id, s, nil)
-      end
+      frames, remains = sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
 
       frames.each do |frame|
         do_send(io, frame, false)
@@ -362,7 +354,7 @@ module Biryani
         transition_state_send(frame, streams_ctx)
       end
 
-      data_buffer.store(stream_id, remains) unless end_stream
+      data_buffer.store(stream_id, remains) unless remains.empty?
     end
     # rubocop: enable Metrics/ParameterLists
 
@@ -391,14 +383,27 @@ module Biryani
     end
     # rubocop: enable Metrics/ParameterLists
 
-    # @param data_length [Integer]
+    # @param data [String]
     # @param stream_id [Integer]
     # @param send_window [Window]
+    # @param max_frame_size [Integer]
     # @param streams_ctx [StreamsContext]
     #
-    # @return [Integer]
-    def self.sendable_length(data_length, stream_id, send_window, streams_ctx)
-      [data_length, send_window.length, streams_ctx[stream_id].send_window.length].min
+    # @return [Array<Object>] frames
+    # @return [String]
+    def self.sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+      len = [data.bytesize, send_window.length, streams_ctx[stream_id].send_window.length].min
+
+      payload = data[0...len]
+      remains = data[len..] || ''
+
+      len = (len + max_frame_size - 1) / max_frame_size
+      frames = payload.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
+        end_stream = remains.empty? && index == len - 1
+        Frame::Data.new(end_stream, stream_id, s, nil)
+      end
+
+      [frames, remains]
     end
 
     # @param io [IO]

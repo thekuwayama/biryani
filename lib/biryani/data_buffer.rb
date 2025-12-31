@@ -16,36 +16,26 @@ module Biryani
     # @param max_frame_size [Intger]
     #
     # @return [Array<Object>] frames
-    # rubocop: disable Metrics/AbcSize
     def take!(send_window, streams_ctx, max_frame_size)
       datas = []
       @buffer.each do |stream_id, data|
-        len = Connection.sendable_length(data.bytesize, stream_id, send_window, streams_ctx)
-        next if len.zero?
+        frames, remains = Connection.sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+        next if frames.empty?
 
-        if @buffer[stream_id].bytesize > len
-          payload = @buffer[stream_id][0...len]
-          @buffer[stream_id] = @buffer[stream_id][len..]
-          remained = true
-        else
-          payload = @buffer[stream_id]
+        datas += frames
+        if remains.empty?
           @buffer.delete(stream_id)
-          remained = false
+        else
+          @buffer[stream_id] = remains
         end
 
-        len = (payload.length + max_frame_size - 1) / max_frame_size
-        datas += payload.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
-          end_stream = !remained && index == len - 1
-          Frame::Data.new(end_stream, stream_id, s, nil)
-        end
-
-        send_window.consume!(payload.length)
-        streams_ctx[stream_id].send_window.consume!(payload.length)
+        len = frames.map(&:length).sum
+        send_window.consume!(len)
+        streams_ctx[stream_id].send_window.consume!(len)
       end
 
       datas
     end
-    # rubocop: enable Metrics/AbcSize
 
     # @return [Integer]
     def length
