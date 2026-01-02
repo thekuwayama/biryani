@@ -56,6 +56,35 @@ module Biryani
     def last_stream_id
       @h.reject { |_, ctx| ctx.idle? }.keys.max || 0
     end
+
+    # @param data_buffer [DataBuffer]
+    def remove_closed(data_buffer)
+      closed_ids = closed_stream_ids.filter { |id| !data_buffer.has?(id) }
+      closed_ids.each do |id|
+        @h[id].tx.close
+        @h[id].stream.rx << nil
+        @h[id].fragment.close
+        @h[id].content.close
+      end
+    end
+
+    def close_all
+      each do |ctx|
+        ctx.tx.close
+        ctx.fragment.close
+        ctx.content.close
+        ctx.state.close
+      end
+    end
+
+    def clear_all
+      each do |ctx|
+        ctx.tx.close
+        ctx.stream.rx << nil
+        ctx.fragment.close
+        ctx.content.close
+      end
+    end
   end
 
   class StreamContext

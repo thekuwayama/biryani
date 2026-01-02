@@ -21,7 +21,7 @@ RSpec.describe Connection do
     it 'should transition' do
       streams_ctx[1].state.transition!(headers, :recv)
       streams_ctx[2].state.transition!(headers, :recv)
-      Connection.close_all_streams(streams_ctx)
+      streams_ctx.close_all
       expect { streams_ctx[1].tx << nil }.to raise_error Ractor::ClosedError
       expect { streams_ctx[2].tx << nil }.to raise_error Ractor::ClosedError
     end
