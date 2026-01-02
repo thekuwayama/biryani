@@ -97,13 +97,13 @@ module Biryani
           self.class.send_headers(io, stream_id, fragment, data.empty?, max_frame_size, @streams_ctx)
           self.class.send_data(io, stream_id, data, @send_window, max_frame_size, @streams_ctx, @data_buffer) unless data.empty?
 
-          self.class.remove_closed_streams(@streams_ctx, @data_buffer)
+          @streams_ctx.remove_closed(@data_buffer)
         end
 
         break if closed?
       end
     ensure
-      self.class.clear_all_streams(@streams_ctx)
+      @streams_ctx.clear_all
     end
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/BlockLength
@@ -288,43 +288,11 @@ module Biryani
       when FrameType::SETTINGS, FrameType::PING
         false
       when FrameType::GOAWAY
-        close_all_streams(streams_ctx)
+        streams_ctx.close_all
         true
       else
         streams_ctx[stream_id].state.transition!(send_frame, :send)
         false
-      end
-    end
-
-    # @param streams_ctx [StreamsContext]
-    def self.clear_all_streams(streams_ctx)
-      streams_ctx.each do |ctx|
-        ctx.tx.close
-        ctx.stream.rx << nil
-        ctx.fragment.close
-        ctx.content.close
-      end
-    end
-
-    # @param streams_ctx [StreamsContext]
-    def self.close_all_streams(streams_ctx)
-      streams_ctx.each do |ctx|
-        ctx.tx.close
-        ctx.fragment.close
-        ctx.content.close
-        ctx.state.close
-      end
-    end
-
-    # @param streams_ctx [StreamsContext]
-    # @param data_buffer [DataBuffer]
-    def self.remove_closed_streams(streams_ctx, data_buffer)
-      closed_ids = streams_ctx.closed_stream_ids.filter { |id| !data_buffer.has?(id) }
-      closed_ids.each do |id|
-        streams_ctx[id].tx.close
-        streams_ctx[id].stream.rx << nil
-        streams_ctx[id].fragment.close
-        streams_ctx[id].content.close
       end
     end
 
