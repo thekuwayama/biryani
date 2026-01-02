@@ -312,7 +312,7 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
     def self.send_data(io, stream_id, data, send_window, max_frame_size, streams_ctx, data_buffer)
-      frames, remains = streams_ctx.sendable_data_frames(data, stream_id, send_window, max_frame_size)
+      frames, remains = streams_ctx.sendable_data_frames(stream_id, data, send_window, max_frame_size)
 
       frames.each do |frame|
         do_send(io, frame, false)

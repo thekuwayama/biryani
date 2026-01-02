@@ -57,14 +57,14 @@ module Biryani
       @h.reject { |_, ctx| ctx.idle? }.keys.max || 0
     end
 
-    # @param data [String]
     # @param stream_id [Integer]
+    # @param data [String]
     # @param send_window [Window]
     # @param max_frame_size [Integer]
     #
     # @return [Array<Object>] frames
     # @return [String]
-    def sendable_data_frames(data, stream_id, send_window, max_frame_size)
+    def sendable_data_frames(stream_id, data, send_window, max_frame_size)
       len = [data.bytesize, send_window.length, @h[stream_id].send_window.length].min
 
       payload = data[0...len]
