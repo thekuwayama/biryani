@@ -57,6 +57,28 @@ module Biryani
       @h.reject { |_, ctx| ctx.idle? }.keys.max || 0
     end
 
+    # @param data [String]
+    # @param stream_id [Integer]
+    # @param send_window [Window]
+    # @param max_frame_size [Integer]
+    #
+    # @return [Array<Object>] frames
+    # @return [String]
+    def sendable_data_frames(data, stream_id, send_window, max_frame_size)
+      len = [data.bytesize, send_window.length, @h[stream_id].send_window.length].min
+
+      payload = data[0...len]
+      remains = data[len..] || ''
+
+      len = (len + max_frame_size - 1) / max_frame_size
+      frames = payload.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
+        end_stream = remains.empty? && index == len - 1
+        Frame::Data.new(end_stream, stream_id, s, nil)
+      end
+
+      [frames, remains]
+    end
+
     # @param data_buffer [DataBuffer]
     def remove_closed(data_buffer)
       closed_ids = closed_stream_ids.filter { |id| !data_buffer.has?(id) }

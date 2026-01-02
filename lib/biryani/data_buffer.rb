@@ -19,7 +19,7 @@ module Biryani
     def take!(send_window, streams_ctx, max_frame_size)
       datas = []
       @buffer.each do |stream_id, data|
-        frames, remains = Connection.sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+        frames, remains = streams_ctx.sendable_data_frames(data, stream_id, send_window, max_frame_size)
         next if frames.empty?
 
         datas += frames
