@@ -21,7 +21,7 @@ module Biryani
     def initialize(proc)
       @sock = nil # Ractor
       @proc = proc
-      @streams_ctx = StreamsContext.new
+      @streams_ctx = StreamsContext.new(proc)
       @encoder = HPACK::Encoder.new(4_096)
       @decoder = HPACK::Decoder.new(4_096)
       @send_window = Window.new(65_535)
@@ -176,7 +176,7 @@ module Biryani
       max_streams = @peer_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]
       send_initial_window_size = @peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       recv_initial_window_size = @settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
-      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size, @proc)
+      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
       return [obj] if Biryani.err?(obj)
 
       ctx = obj
@@ -234,18 +234,17 @@ module Biryani
     # @param max_streams [Integer]
     # @param send_initial_window_size [Integer]
     # @param recv_initial_window_size [Integer]
-    # @param proc [Proc]
     #
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
-    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size, proc)
+    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
       ctx = streams_ctx[stream_id]
       return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'new stream identifier is less than the existing stream identifiers') if ctx.nil? && streams_ctx.last_stream_id > stream_id
 
-      ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size, proc) if ctx.nil?
+      ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size) if ctx.nil?
       obj = ctx.state.transition!(recv_frame, :recv)
       return obj if Biryani.err?(obj)
 

@@ -3,9 +3,9 @@ require_relative 'spec_helper'
 RSpec.describe StreamsContext do
   context 'close_all' do
     let(:streams_ctx) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should close' do
@@ -17,9 +17,9 @@ RSpec.describe StreamsContext do
 
   context 'close_all' do
     let(:streams_ctx) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should close' do
@@ -31,9 +31,9 @@ RSpec.describe StreamsContext do
 
   context 'remove_closed' do
     let(:streams_ctx1) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     let(:data_buffer1) do
@@ -45,9 +45,9 @@ RSpec.describe StreamsContext do
     end
 
     let(:streams_ctx2) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx[2].state.close
       streams_ctx
     end
@@ -60,9 +60,9 @@ RSpec.describe StreamsContext do
     end
 
     let(:streams_ctx3) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx[2].state.close
       streams_ctx
     end
