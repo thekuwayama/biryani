@@ -343,7 +343,7 @@ module Biryani
     def self.handle_data(stream_id, data, recv_window, streams_ctx, decoder)
       ctx = streams_ctx[stream_id]
       return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'DATA Frame length exceeds flow-control window size') \
-        if ctx.recv_window.consume!(data.bytesize).negative? || recv_window.consume!(data.bytesize).negative?
+        if recv_window.consume!(data.bytesize).negative? || ctx.recv_window.consume!(data.bytesize).negative?
 
       ctx.content << data
       if ctx.state.half_closed_remote?
@@ -354,8 +354,8 @@ module Biryani
       end
 
       window_updates = []
-      window_updates << Frame::WindowUpdate.new(stream_id, ctx.recv_window.capacity - ctx.recv_window.length) if ctx.recv_window.length < ctx.recv_window.capacity / 2
       window_updates << Frame::WindowUpdate.new(0, recv_window.capacity - recv_window.length) if recv_window.length < recv_window.capacity / 2
+      window_updates << Frame::WindowUpdate.new(stream_id, ctx.recv_window.capacity - ctx.recv_window.length) if ctx.recv_window.length < ctx.recv_window.capacity / 2
       window_updates
     end
     # rubocop: enable Metrics/AbcSize

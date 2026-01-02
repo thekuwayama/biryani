@@ -35,7 +35,7 @@ RSpec.describe Connection do
     it 'should handle' do
       frames = Connection.handle_data(2, 'Hello, world!', recv_window2, streams_ctx2, decoder)
       expect(frames.map(&:f_type)).to eq [FrameType::WINDOW_UPDATE, FrameType::WINDOW_UPDATE]
-      expect(frames.map(&:stream_id)).to eq [2, 0]
+      expect(frames.map(&:stream_id)).to eq [0, 2]
       expect(frames.map(&:window_size_increment)).to eq [65_535 / 2 + 13, 65_535 / 2 + 13]
       expect(streams_ctx2[2].content.string).to eq 'Hello, world!'
     end
