@@ -9,9 +9,9 @@ RSpec.describe DataBuffer do
       Window.new(65_535)
     end
     let(:streams_ctx1) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should take' do
@@ -31,9 +31,9 @@ RSpec.describe DataBuffer do
       Window.new(65_535)
     end
     let(:streams_ctx2) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should take' do
@@ -55,9 +55,9 @@ RSpec.describe DataBuffer do
       Window.new(65_535)
     end
     let(:streams_ctx3) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should take' do
@@ -80,10 +80,10 @@ RSpec.describe DataBuffer do
       Window.new(65_535)
     end
     let(:streams_ctx4) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
       streams_ctx[1].send_window.consume!(65_535)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should take' do
@@ -108,9 +108,9 @@ RSpec.describe DataBuffer do
       send_window
     end
     let(:streams_ctx5) do
-      streams_ctx = StreamsContext.new
-      streams_ctx.new_context(1, 65_535, 65_535, do_nothing_proc)
-      streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
     end
     it 'should take' do

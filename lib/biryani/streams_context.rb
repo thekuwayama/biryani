@@ -1,17 +1,17 @@
 module Biryani
   class StreamsContext
-    def initialize
-      @h = {}
+    def initialize(proc)
+      @h = {} # Hash<Integer, StreamContext>
+      @proc = proc
     end
 
     # @param stream_id [Integer]
     # @param send_initial_window_size [Integer]
     # @param recv_initial_window_size [Integer]
-    # @param proc [Proc]
     #
     # @return [StreamContext]
-    def new_context(stream_id, send_initial_window_size, recv_initial_window_size, proc)
-      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, proc)
+    def new_context(stream_id, send_initial_window_size, recv_initial_window_size)
+      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, @proc)
       @h[stream_id] = ctx
       ctx
     end
