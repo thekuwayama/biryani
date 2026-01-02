@@ -152,9 +152,9 @@ module Biryani
         return [err] unless err.nil?
 
         max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
-        @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
+        @data_buffer.take!(@send_window, @streams_ctx, max_frame_size) # return DATA Frames
       else
-        # ignore unknown frame type
+        # ignore UNKNOWN Frame
 
         []
       end
@@ -185,7 +185,7 @@ module Biryani
         obj = self.class.handle_data(stream_id, frame.data, @recv_window, @streams_ctx, @decoder)
         return [obj] if Biryani.err?(obj)
 
-        obj
+        obj # return WINDOW_UPDATE Frames
       when FrameType::HEADERS, FrameType::CONTINUATION
         err = self.class.handle_headers(frame, ctx, @decoder)
         return [err] unless err.nil?
