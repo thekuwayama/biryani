@@ -17,6 +17,7 @@ RSpec.describe Connection do
     end
     it 'should handle' do
       expect(Connection.handle_data(2, 'Hello, world!', recv_window1, streams_ctx1, decoder)).to eq []
+      expect(streams_ctx1[2].content.string).to eq 'Hello, world!'
     end
 
     let(:recv_window2) do
@@ -36,6 +37,7 @@ RSpec.describe Connection do
       expect(frames.map(&:f_type)).to eq [FrameType::WINDOW_UPDATE, FrameType::WINDOW_UPDATE]
       expect(frames.map(&:stream_id)).to eq [2, 0]
       expect(frames.map(&:window_size_increment)).to eq [65_535 / 2 + 13, 65_535 / 2 + 13]
+      expect(streams_ctx2[2].content.string).to eq 'Hello, world!'
     end
 
     let(:recv_window3) do
@@ -49,7 +51,7 @@ RSpec.describe Connection do
       streams_ctx.new_context(2, 65_535, 65_535, do_nothing_proc)
       streams_ctx
     end
-    it 'should handle' do
+    it 'should not handle' do
       expect(Connection.handle_data(2, 'Hello, world!', recv_window3, streams_ctx3, decoder)).to be_kind_of ConnectionError
     end
   end
