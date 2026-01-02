@@ -145,7 +145,7 @@ module Biryani
         [ping_ack]
       when FrameType::GOAWAY
         self.class.handle_goaway(frame)
-        # TODO: logging error
+
         []
       when FrameType::WINDOW_UPDATE
         err = self.class.handle_connection_window_update(frame, @send_window)
@@ -155,6 +155,7 @@ module Biryani
         @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
       else
         # ignore unknown frame type
+
         []
       end
     end
@@ -163,10 +164,8 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
-    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
-    # rubocop: disable Metrics/PerceivedComplexity
     def handle_stream_frame(frame)
       stream_id = frame.stream_id
       typ = frame.f_type
@@ -182,34 +181,26 @@ module Biryani
       ctx = obj
       case typ
       when FrameType::DATA
-        # TODO: flow-control using @recv_window & ctx.recv_window
-        ctx.content << frame.data
-        if ctx.state.half_closed_remote?
-          obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
-          return [obj] if Biryani.err?(obj)
-
-          ctx.stream.rx << obj
-        end
+        err = self.class.handle_data(frame, ctx, @decoder)
+        return [err] unless err.nil?
 
         []
       when FrameType::HEADERS, FrameType::CONTINUATION
-        ctx.fragment << frame.fragment
-        if ctx.state.half_closed_remote?
-          obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
-          return [obj] if Biryani.err?(obj)
-
-          ctx.stream.rx << obj
-        end
+        err = self.class.handle_headers(frame, ctx, @decoder)
+        return [err] unless err.nil?
 
         []
       when FrameType::PRIORITY
         # ignore PRIORITY Frame
+
         []
       when FrameType::PUSH_PROMISE
         # TODO
+
         []
       when FrameType::RST_STREAM
-        self.class.handle_rst_stream(frame, @streams_ctx)
+        self.class.handle_rst_stream(frame, ctx)
+
         []
       when FrameType::WINDOW_UPDATE
         err = self.class.handle_stream_window_update(frame, @streams_ctx)
@@ -219,14 +210,13 @@ module Biryani
         @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
       else
         # ignore UNKNOWN Frame
+
         []
       end
     end
-    # rubocop: enable Metrics/AbcSize
+
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
-    # rubocop: enable Metrics/PerceivedComplexity
-
     def close
       @closed = true
     end
@@ -340,11 +330,44 @@ module Biryani
       ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
     end
 
-    # @param rst_stream [RstStream]
-    # @param streams_ctx [StreamsContext]
-    def self.handle_rst_stream(rst_stream, streams_ctx)
-      stream_id = rst_stream.stream_id
-      streams_ctx[stream_id].state.close
+    # @param data [Data]
+    # @param ctx [StreamContext]
+    # @param decoder [Decoder]
+    #
+    # @return [nil, ConnectionError]
+    def self.handle_data(data, ctx, decoder)
+      ctx.content << data.data
+      if ctx.state.half_closed_remote?
+        obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
+        return [obj] if Biryani.err?(obj)
+
+        ctx.stream.rx << obj
+      end
+
+      nil
+    end
+
+    # @param headers [Headers]
+    # @param ctx [StreamContext]
+    # @param decoder [Decoder]
+    #
+    # @return [nil, ConnectionError]
+    def self.handle_headers(headers, ctx, decoder)
+      ctx.fragment << headers.fragment
+      if ctx.state.half_closed_remote?
+        obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
+        return [obj] if Biryani.err?(obj)
+
+        ctx.stream.rx << obj
+      end
+
+      nil
+    end
+
+    # @param _rst_stream [RstStream]
+    # @param ctx [StreamContext]
+    def self.handle_rst_stream(_rst_stream, ctx)
+      ctx.state.close
     end
 
     # @param settings [Settings]
