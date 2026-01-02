@@ -312,7 +312,7 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
     def self.send_data(io, stream_id, data, send_window, max_frame_size, streams_ctx, data_buffer)
-      frames, remains = sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
+      frames, remains = streams_ctx.sendable_data_frames(stream_id, data, send_window, max_frame_size)
 
       frames.each do |frame|
         do_send(io, frame, false)
@@ -345,29 +345,6 @@ module Biryani
         do_send(io, frame, false)
         transition_state_send(frame, streams_ctx)
       end
-    end
-
-    # @param data [String]
-    # @param stream_id [Integer]
-    # @param send_window [Window]
-    # @param max_frame_size [Integer]
-    # @param streams_ctx [StreamsContext]
-    #
-    # @return [Array<Object>] frames
-    # @return [String]
-    def self.sendable_data_frames(data, stream_id, send_window, max_frame_size, streams_ctx)
-      len = [data.bytesize, send_window.length, streams_ctx[stream_id].send_window.length].min
-
-      payload = data[0...len]
-      remains = data[len..] || ''
-
-      len = (len + max_frame_size - 1) / max_frame_size
-      frames = payload.gsub(/.{1,#{max_frame_size}}/m).with_index.map do |s, index|
-        end_stream = remains.empty? && index == len - 1
-        Frame::Data.new(end_stream, stream_id, s, nil)
-      end
-
-      [frames, remains]
     end
 
     # @param io [IO]
