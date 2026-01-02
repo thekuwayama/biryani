@@ -4,13 +4,11 @@ RSpec.describe Biryani do
   let(:data) do
     Frame::Data.new(false, 2, 'Hello, world!', 'Howdy!')
   end
-
   let(:connection_error) do
     ConnectionError.new(ErrorCode::NO_ERROR, 'debug')
   end
-
   let(:stream_error) do
-    StreamError.new(ErrorCode::NO_ERROR, 0x01, 'debug')
+    StreamError.new(ErrorCode::NO_ERROR, 1, 'debug')
   end
 
   context 'err?' do
