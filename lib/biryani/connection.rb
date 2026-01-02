@@ -76,7 +76,7 @@ module Biryani
 
         port, obj = Ractor.select(*ports)
         if port == @sock
-          if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+          if Biryani.err?(obj)
             reply_frame = self.class.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_state_send(reply_frame, @streams_ctx)
@@ -177,7 +177,7 @@ module Biryani
       send_initial_window_size = @peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       recv_initial_window_size = @settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size, @proc)
-      return [obj] if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+      return [obj] if Biryani.err?(obj)
 
       ctx = obj
       case typ
@@ -186,7 +186,7 @@ module Biryani
         ctx.content << frame.data
         if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
-          return [obj] if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+          return [obj] if Biryani.err?(obj)
 
           ctx.stream.rx << obj
         end
@@ -196,7 +196,7 @@ module Biryani
         ctx.fragment << frame.fragment
         if ctx.state.half_closed_remote?
           obj = self.class.http_request(ctx.fragment.string, ctx.content.string, @decoder)
-          return [obj] if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+          return [obj] if Biryani.err?(obj)
 
           ctx.stream.rx << obj
         end
@@ -270,7 +270,7 @@ module Biryani
 
       ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size, proc) if ctx.nil?
       obj = ctx.state.transition!(recv_frame, :recv)
-      return obj if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+      return obj if Biryani.err?(obj)
 
       ctx
     end
@@ -423,7 +423,7 @@ module Biryani
     # @return [HTTPRequest, ConnectionError]
     def self.http_request(fragment, content, decoder)
       obj = decoder.decode(fragment)
-      return obj if obj.is_a?(StreamError) || obj.is_a?(ConnectionError)
+      return obj if Biryani.err?(obj)
 
       fields = obj
       builder = HTTPRequestBuilder.new
