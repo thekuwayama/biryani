@@ -164,6 +164,7 @@ module Biryani
     # @param frame [Object]
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/MethodLength
     def handle_stream_frame(frame)
@@ -181,10 +182,10 @@ module Biryani
       ctx = obj
       case typ
       when FrameType::DATA
-        err = self.class.handle_data(frame, ctx, @decoder)
-        return [err] unless err.nil?
+        obj = self.class.handle_data(stream_id, frame.data, @recv_window, @streams_ctx, @decoder)
+        return [obj] if Biryani.err?(obj)
 
-        []
+        obj
       when FrameType::HEADERS, FrameType::CONTINUATION
         err = self.class.handle_headers(frame, ctx, @decoder)
         return [err] unless err.nil?
@@ -214,9 +215,10 @@ module Biryani
         []
       end
     end
-
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/MethodLength
+
     def close
       @closed = true
     end
@@ -287,7 +289,7 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     # @param data_buffer [DataBuffer]
     def self.send_data(io, stream_id, data, send_window, max_frame_size, streams_ctx, data_buffer)
-      frames, remains = streams_ctx.sendable_data_frames(stream_id, data, send_window, max_frame_size)
+      frames, remains = streams_ctx.sendable_datas(stream_id, data, send_window, max_frame_size)
 
       frames.each do |frame|
         do_send(io, frame, false)
@@ -330,22 +332,33 @@ module Biryani
       ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
     end
 
-    # @param data [Data]
-    # @param ctx [StreamContext]
+    # @param stream_id [Integer]
+    # @param data [String]
+    # @param recv_window [Window]
+    # @param streams_ctx [StreamsContext]
     # @param decoder [Decoder]
     #
-    # @return [nil, ConnectionError]
-    def self.handle_data(data, ctx, decoder)
-      ctx.content << data.data
+    # @return [Array<WindowUpdate>, ConnectionError]
+    # rubocop: disable Metrics/AbcSize
+    def self.handle_data(stream_id, data, recv_window, streams_ctx, decoder)
+      ctx = streams_ctx[stream_id]
+      return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'DATA Frame length exceeds flow-control window size') \
+        if ctx.recv_window.consume!(data.bytesize).negative? || recv_window.consume!(data.bytesize).negative?
+
+      ctx.content << data
       if ctx.state.half_closed_remote?
         obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
-        return [obj] if Biryani.err?(obj)
+        return obj if Biryani.err?(obj)
 
         ctx.stream.rx << obj
       end
 
-      nil
+      window_updates = []
+      window_updates << Frame::WindowUpdate.new(stream_id, ctx.recv_window.capacity - ctx.recv_window.length) if ctx.recv_window.length < ctx.recv_window.capacity / 2
+      window_updates << Frame::WindowUpdate.new(0, recv_window.capacity - recv_window.length) if recv_window.length < recv_window.capacity / 2
+      window_updates
     end
+    # rubocop: enable Metrics/AbcSize
 
     # @param headers [Headers]
     # @param ctx [StreamContext]
@@ -405,7 +418,6 @@ module Biryani
     #
     # @return [nil, ConnectionError]
     def self.handle_connection_window_update(window_update, send_window)
-      # TODO: send WINDOW_UPDATE to do the flow-conrol
       send_window.increase!(window_update.window_size_increment)
       return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'flow-control window exceeds 2^31-1') if send_window.length > 2**31 - 1
 

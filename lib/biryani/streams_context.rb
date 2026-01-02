@@ -64,7 +64,7 @@ module Biryani
     #
     # @return [Array<Object>] frames
     # @return [String]
-    def sendable_data_frames(stream_id, data, send_window, max_frame_size)
+    def sendable_datas(stream_id, data, send_window, max_frame_size)
       len = [data.bytesize, send_window.length, @h[stream_id].send_window.length].min
 
       payload = data[0...len]
