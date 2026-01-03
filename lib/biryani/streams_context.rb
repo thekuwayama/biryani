@@ -98,15 +98,6 @@ module Biryani
         ctx.state.close
       end
     end
-
-    def clear_all
-      each do |ctx|
-        ctx.tx.close
-        ctx.stream.rx << nil
-        ctx.fragment.close
-        ctx.content.close
-      end
-    end
   end
 
   class StreamContext

@@ -108,8 +108,6 @@ module Biryani
 
         break if closed?
       end
-    ensure
-      @streams_ctx.clear_all
     end
     # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/BlockLength
