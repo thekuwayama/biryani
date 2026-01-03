@@ -100,12 +100,12 @@ module Biryani
       # receiving_data
       in [:receiving_data, FrameType::DATA, :recv] if frame.end_stream?
         :half_closed_remote
-      in [:receiving_data, FrameType::WINDOW_UPDATE, :recv]
-        state
       in [:receiving_data, FrameType::DATA, :recv]
         state
       in [:receiving_data, FrameType::RST_STREAM, _]
         :closed
+      in [:receiving_data, FrameType::WINDOW_UPDATE, _]
+        state
       in [:receiving_data, _, _]
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
 
@@ -132,7 +132,7 @@ module Biryani
         state
       in [:half_closed_remote, FrameType::RST_STREAM, _]
         :closed
-      in [half_closed_remote, FrameType::WINDOW_UPDATE, :recv]
+      in [:half_closed_remote, FrameType::WINDOW_UPDATE, _]
         state
       in [:half_closed_remote, _, :recv]
         unexpected(ErrorCode::STREAM_CLOSED, state, typ, direction)
