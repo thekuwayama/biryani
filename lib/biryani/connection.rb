@@ -87,6 +87,12 @@ module Biryani
             recv_dispatch(obj).each do |frame|
               reply_frame = Biryani.unwrap(frame, @streams_ctx.last_stream_id)
               self.class.do_send(io, reply_frame, true)
+              if reply_frame.f_type == FrameType::WINDOW_UPDATE && reply_frame.stream_id.zero?
+                @recv_window.increase!(reply_frame.window_size_increment)
+              elsif reply_frame.f_type == FrameType::WINDOW_UPDATE
+                @streams_ctx[reply_frame.stream_id].recv_window.increase!(reply_frame.window_size_increment)
+              end
+
               close if self.class.transition_state_send(reply_frame, @streams_ctx)
             end
           end
@@ -267,7 +273,7 @@ module Biryani
         streams_ctx.close_all
         true
       else
-        streams_ctx[stream_id].state.transition!(send_frame, :send)
+        streams_ctx[stream_id].state.transition!(send_frame, :send) unless stream_id.zero?
         false
       end
     end
