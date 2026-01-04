@@ -102,10 +102,9 @@ module Biryani
           max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
           self.class.send_headers(io, stream_id, fragment, data.empty?, max_frame_size, @streams_ctx)
           self.class.send_data(io, stream_id, data, @send_window, max_frame_size, @streams_ctx, @data_buffer) unless data.empty?
-
-          @streams_ctx.remove_closed(@data_buffer)
         end
 
+        @streams_ctx.remove_closed(@data_buffer)
         break if closed?
       end
     end

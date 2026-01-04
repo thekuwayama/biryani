@@ -84,7 +84,6 @@ module Biryani
       closed_ids = closed_stream_ids.filter { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
         @h[id].tx.close
-        @h[id].stream.rx << nil
         @h[id].fragment.close
         @h[id].content.close
       end
