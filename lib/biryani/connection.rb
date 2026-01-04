@@ -349,7 +349,7 @@ module Biryani
         if recv_window.consume!(data.bytesize).negative? || ctx.recv_window.consume!(data.bytesize).negative?
 
       ctx.content << data
-      if ctx.state.half_closed_remote?
+      if ctx.half_closed_remote?
         obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
         return obj if Biryani.err?(obj)
 
@@ -370,7 +370,7 @@ module Biryani
     # @return [nil, ConnectionError]
     def self.handle_headers(headers, ctx, decoder)
       ctx.fragment << headers.fragment
-      if ctx.state.half_closed_remote?
+      if ctx.half_closed_remote?
         obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
         return [obj] if Biryani.err?(obj)
 

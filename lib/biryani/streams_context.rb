@@ -131,5 +131,10 @@ module Biryani
     def active?
       @state.active?
     end
+
+    # @return [Boolean]
+    def half_closed_remote?
+      @state.half_closed_remote?
+    end
   end
 end
