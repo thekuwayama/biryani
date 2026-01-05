@@ -182,6 +182,8 @@ module Biryani
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
 
       # closed
+      in [:closed, FrameType::PRIORITY, :recv]
+        state
       in [:closed, FrameType::RST_STREAM, :recv]
         state
       in [:closed, _, :send]
