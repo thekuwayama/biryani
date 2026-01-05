@@ -36,6 +36,7 @@ module Biryani
 
         stream_dependency, weight = s[9..13].unpack('NC')
         stream_dependency %= 2**31
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'cannot depend on itself') if stream_dependency == stream_id
 
         Priority.new(stream_id, stream_dependency, weight)
       end
