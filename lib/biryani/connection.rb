@@ -349,7 +349,7 @@ module Biryani
 
       ctx.content << data
       if ctx.half_closed_remote?
-        obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
+        obj = http_request(ctx.fragment, ctx.content, decoder)
         return obj if Biryani.err?(obj)
 
         ctx.stream.rx << obj
@@ -370,7 +370,7 @@ module Biryani
     def self.handle_headers(headers, ctx, decoder)
       ctx.fragment << headers.fragment
       if ctx.half_closed_remote?
-        obj = http_request(ctx.fragment.string, ctx.content.string, decoder)
+        obj = http_request(ctx.fragment, ctx.content, decoder)
         return [obj] if Biryani.err?(obj)
 
         ctx.stream.rx << obj

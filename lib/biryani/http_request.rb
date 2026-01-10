@@ -39,7 +39,7 @@ module Biryani
       # TODO: trailers
 
       if name == 'cookie' && @h.key?('cookie')
-        @h[name] += "; #{value}"
+        @h[name] << "; #{value}"
       else
         @h[name] = value
       end

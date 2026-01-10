@@ -84,16 +84,12 @@ module Biryani
       closed_ids = closed_stream_ids.filter { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
         @h[id].tx.close
-        @h[id].fragment.close
-        @h[id].content.close
       end
     end
 
     def close_all
       each do |ctx|
         ctx.tx.close
-        ctx.fragment.close
-        ctx.content.close
         ctx.state.close
       end
     end
@@ -111,8 +107,8 @@ module Biryani
       @stream = Stream.new(@tx, stream_id, proc)
       @send_window = Window.new(send_initial_window_size)
       @recv_window = Window.new(recv_initial_window_size)
-      @fragment = StringIO.new
-      @content = StringIO.new
+      @fragment = ''.b
+      @content = ''.b
       @state = State.new
     end
 
