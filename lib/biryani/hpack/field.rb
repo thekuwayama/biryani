@@ -98,7 +98,7 @@ module Biryani
         "\x40#{String.encode(name)}#{String.encode(value)}"
       end
 
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
@@ -106,24 +106,24 @@ module Biryani
       # @return [Integer]
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
-      def self.decode(s, cursor, dynamic_table)
-        byte = s.getbyte(cursor)
+      def self.decode(io, cursor, dynamic_table)
+        byte = io.get_value(:U8, cursor)
         if (byte & 0b10000000).positive?
-          decode_indexed(s, cursor, dynamic_table)
+          decode_indexed(io, cursor, dynamic_table)
         elsif byte == 0b01000000
-          decode_literal_field_incremental_indexing(s, cursor, dynamic_table)
+          decode_literal_field_incremental_indexing(io, cursor, dynamic_table)
         elsif (byte & 0b01000000).positive?
-          decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
+          decode_literal_value_incremental_indexing(io, cursor, dynamic_table)
         elsif (byte & 0b00100000).positive?
-          decode_dynamic_table_size_update(s, cursor, dynamic_table)
+          decode_dynamic_table_size_update(io, cursor, dynamic_table)
         elsif byte == 0b00010000
-          decode_literal_field_never_indexed(s, cursor)
+          decode_literal_field_never_indexed(io, cursor)
         elsif (byte & 0b00010000).positive?
-          decode_literal_value_never_indexed(s, cursor, dynamic_table)
+          decode_literal_value_never_indexed(io, cursor, dynamic_table)
         elsif byte.zero?
-          decode_literal_field_without_indexing(s, cursor)
+          decode_literal_field_without_indexing(io, cursor)
         elsif (byte & 0b11110000).zero?
-          decode_literal_value_without_indexing(s, cursor, dynamic_table)
+          decode_literal_value_without_indexing(io, cursor, dynamic_table)
         else
           raise 'unreachable'
         end
@@ -137,14 +137,14 @@ module Biryani
       # +---+---------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.1
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_indexed(s, cursor, dynamic_table)
-        index, c = Integer.decode(s, 7, cursor)
+      def self.decode_indexed(io, cursor, dynamic_table)
+        index, c = Integer.decode(io, 7, cursor)
         raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
@@ -171,15 +171,15 @@ module Biryani
       # +-------------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.1
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_field_incremental_indexing(s, cursor, dynamic_table)
-        name, c = String.decode(s, cursor + 1)
-        value, c = String.decode(s, c)
+      def self.decode_literal_field_incremental_indexing(io, cursor, dynamic_table)
+        name, c = String.decode(io, cursor + 1)
+        value, c = String.decode(io, c)
         dynamic_table.store(name, value)
 
         [[name, value], c]
@@ -195,14 +195,14 @@ module Biryani
       # +-------------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.1
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_incremental_indexing(s, cursor, dynamic_table)
-        index, c = Integer.decode(s, 6, cursor)
+      def self.decode_literal_value_incremental_indexing(io, cursor, dynamic_table)
+        index, c = Integer.decode(io, 6, cursor)
         raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
@@ -211,7 +211,7 @@ module Biryani
                else
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
                end
-        value, c = String.decode(s, c)
+        value, c = String.decode(io, c)
         dynamic_table.store(name, value)
 
         [[name, value], c]
@@ -223,16 +223,16 @@ module Biryani
       # +---+---------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.3
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [nil]
       # @return [Integer]
-      def self.decode_dynamic_table_size_update(s, cursor, dynamic_table)
-        raise Error::HPACKDecodeError unless cursor.zero? || (s.getbyte(0) & 0b00100000).positive? && Integer.decode(s, 5, 0)[1] == cursor
+      def self.decode_dynamic_table_size_update(io, cursor, dynamic_table)
+        raise Error::HPACKDecodeError unless cursor.zero? || (io.get_value(:U8, 0) & 0b00100000).positive? && Integer.decode(io, 5, 0)[1] == cursor
 
-        max_size, c = Integer.decode(s, 5, cursor)
+        max_size, c = Integer.decode(io, 5, cursor)
         raise Error::HPACKDecodeError if max_size > dynamic_table.limit
 
         dynamic_table.chomp!(max_size)
@@ -253,14 +253,14 @@ module Biryani
       # +-------------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.3
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_field_never_indexed(s, cursor)
-        name, c = String.decode(s, cursor + 1)
-        value, c = String.decode(s, c)
+      def self.decode_literal_field_never_indexed(io, cursor)
+        name, c = String.decode(io, cursor + 1)
+        value, c = String.decode(io, c)
 
         [[name, value], c]
       end
@@ -275,14 +275,14 @@ module Biryani
       # +-------------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.3
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_never_indexed(s, cursor, dynamic_table)
-        index, c = Integer.decode(s, 4, cursor)
+      def self.decode_literal_value_never_indexed(io, cursor, dynamic_table)
+        index, c = Integer.decode(io, 4, cursor)
         raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
@@ -291,7 +291,7 @@ module Biryani
                else
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
                end
-        value, c = String.decode(s, c)
+        value, c = String.decode(io, c)
 
         [[name, value], c]
       end
@@ -310,14 +310,14 @@ module Biryani
       # +-------------------------------+
       # https://datatracker.ietf.org/doc/html/rfc7541#section-6.2.2
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_field_without_indexing(s, cursor)
-        name, c = String.decode(s, cursor + 1)
-        value, c = String.decode(s, c)
+      def self.decode_literal_field_without_indexing(io, cursor)
+        name, c = String.decode(io, cursor + 1)
+        value, c = String.decode(io, c)
 
         [[name, value], c]
       end
@@ -331,14 +331,14 @@ module Biryani
       # | Value String (Length octets)  |
       # +-------------------------------+
       #
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param dynamic_table [DynamicTable]
       #
       # @return [Array]
       # @return [Integer]
-      def self.decode_literal_value_without_indexing(s, cursor, dynamic_table)
-        index, c = Integer.decode(s, 4, cursor)
+      def self.decode_literal_value_without_indexing(io, cursor, dynamic_table)
+        index, c = Integer.decode(io, 4, cursor)
         raise Error::HPACKDecodeError if index.zero?
         raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
@@ -347,7 +347,7 @@ module Biryani
                else
                  dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
                end
-        value, c = String.decode(s, c)
+        value, c = String.decode(io, c)
 
         [[name, value], c]
       end

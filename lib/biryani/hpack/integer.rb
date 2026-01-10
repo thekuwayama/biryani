@@ -40,26 +40,30 @@ module Biryani
         bytes.pack('C*')
       end
 
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       # @param n [Integer]
       #
       # @return [Integer]
       # @return [Integer]
-      def self.decode(s, n, cursor)
+      def self.decode(io, n, cursor)
         limit = (1 << n) - 1
-        h = s.getbyte(cursor)
+        h = io.get_value(:U8, cursor)
         return [h & limit, cursor + 1] if (h & limit) != limit
 
         res = limit
-        s[cursor + 1..].each_byte.each_with_index.each do |byte, i|
+        c = cursor + 1
+        i = 0
+        loop do
+          byte = io.get_value(:U8, c + i)
           res += (byte & 127) * 2**(i * 7)
-          cursor += 1
 
           break if (byte & 128).zero?
+
+          i += 1
         end
 
-        [res, cursor + 1]
+        [res, c + i + 1]
       end
     end
   end

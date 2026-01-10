@@ -17,11 +17,11 @@ RSpec.describe HPACK::Integer do
     end
 
     it 'should decode' do
-      expect(HPACK::Integer.decode("\x0a".b, 5, cursor)).to eq [10, 1]
-      expect(HPACK::Integer.decode("\x1f\x9a\x0a".b, 5, cursor)).to eq [1337, 3]
-      expect(HPACK::Integer.decode("\x2a".b, 8, cursor)).to eq [42, 1]
-      expect(HPACK::Integer.decode("\x8a".b, 5, cursor)).to eq [10, 1]
-      expect(HPACK::Integer.decode("\x0a\x0b".b, 5, 1)).to eq [11, 2]
+      expect(HPACK::Integer.decode(IO::Buffer.for("\x0a".b), 5, cursor)).to eq [10, 1]
+      expect(HPACK::Integer.decode(IO::Buffer.for("\x1f\x9a\x0a".b), 5, cursor)).to eq [1337, 3]
+      expect(HPACK::Integer.decode(IO::Buffer.for("\x2a".b), 8, cursor)).to eq [42, 1]
+      expect(HPACK::Integer.decode(IO::Buffer.for("\x8a".b), 5, cursor)).to eq [10, 1]
+      expect(HPACK::Integer.decode(IO::Buffer.for("\x0a\x0b".b), 5, 1)).to eq [11, 2]
     end
   end
 end
