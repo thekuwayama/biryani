@@ -561,7 +561,7 @@ module Biryani
             bits <<= 1
           end
         end
-        raise Error::HuffmanDecodeError if bits_len.positive? && bits != (1 << bits_len + 1) - 2 || bits_len >= 8
+        raise Error::HuffmanDecodeError if bits_len.positive? && bits != (2 << bits_len) - 2 || bits_len >= 8
 
         res
       end
