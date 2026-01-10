@@ -13,7 +13,7 @@ RSpec.describe Connection do
     end
     it 'should handle' do
       expect(Connection.handle_headers(headers, ctx, decoder)).to eq nil
-      expect(ctx.fragment.string).to eq 'this is dummy'
+      expect(ctx.fragment).to eq 'this is dummy'
     end
   end
 end
