@@ -23,17 +23,17 @@ module Biryani
         Integer.encode(res.bytesize, 7, mask) + res
       end
 
-      # @param s [String]
+      # @param io [IO::Buffer]
       # @param cursor [Integer]
       #
       # @return [String]
       # @return [Integer]
-      def self.decode(s, cursor)
-        h = (s.getbyte(cursor) & 0b10000000).positive?
-        len, c = Integer.decode(s, 7, cursor)
-        return [Huffman.decode(s[c...c + len]), c + len] if h
+      def self.decode(io, cursor)
+        h = (io.get_value(:U8, cursor) & 0b10000000).positive?
+        len, c = Integer.decode(io, 7, cursor)
+        return [Huffman.decode(io.get_string(c, len)), c + len] if h
 
-        [s[c...c + len], c + len]
+        [io.get_string(c, len), c + len]
       end
     end
   end

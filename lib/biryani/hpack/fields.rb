@@ -14,10 +14,11 @@ module Biryani
       #
       # @return [Array]
       def self.decode(s, dynamic_table)
+        io = IO::Buffer.for(s)
         cursor = 0
         fields = []
         while cursor < s.bytesize
-          field, cursor = Field.decode(s, cursor, dynamic_table)
+          field, cursor = Field.decode(io, cursor, dynamic_table)
           fields << field unless field.nil?
         end
 
