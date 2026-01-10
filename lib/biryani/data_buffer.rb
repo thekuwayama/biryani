@@ -8,7 +8,7 @@ module Biryani
     # @param data [String]
     def store(stream_id, data)
       @buffer[stream_id] = '' unless @buffer.key?(stream_id)
-      @buffer[stream_id] += data
+      @buffer[stream_id] << data
     end
 
     # @param send_window [Window]
