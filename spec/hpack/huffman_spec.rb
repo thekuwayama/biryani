@@ -8,13 +8,13 @@ RSpec.describe HPACK::Huffman do
     end
 
     it 'should decode' do
-      expect(HPACK::Huffman.decode("\xf1\xe3\xc2\xe5\xf2\x3a\x6b\xa0\xab\x90\xf4\xff".b)).to eq 'www.example.com'
-      expect(HPACK::Huffman.decode("\xa8\xeb\x10\x64\x9c\xbf".b)).to eq 'no-cache'
+      expect(HPACK::Huffman.decode(IO::Buffer.for("\xf1\xe3\xc2\xe5\xf2\x3a\x6b\xa0\xab\x90\xf4\xff".b), 0, 12)).to eq 'www.example.com'
+      expect(HPACK::Huffman.decode(IO::Buffer.for("\xa8\xeb\x10\x64\x9c\xbf".b), 0, 6)).to eq 'no-cache'
     end
 
     it 'should not decode' do
-      expect { HPACK::Huffman.decode("\xff\xff\xff\xff".b) }.to raise_error HPACK::Error::HuffmanDecodeError
-      expect { HPACK::Huffman.decode("\xf8\xff".b) }.to raise_error HPACK::Error::HuffmanDecodeError
+      expect { HPACK::Huffman.decode(IO::Buffer.for("\xff\xff\xff\xff".b), 0, 4) }.to raise_error HPACK::Error::HuffmanDecodeError
+      expect { HPACK::Huffman.decode(IO::Buffer.for("\xf8\xff".b), 0, 2) }.to raise_error HPACK::Error::HuffmanDecodeError
     end
   end
 end
