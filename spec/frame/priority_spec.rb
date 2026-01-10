@@ -10,7 +10,7 @@ RSpec.describe Frame::Priority do
     end
 
     let(:priority2) do
-      Frame::Priority.read("\x00\x00\x05\x02\x00\x00\x00\x00\x09\x00\x00\x00\x0b\x08".b)
+      Frame::Priority.read("\x00\x00\x00\x0b\x08".b, 0, 9)
     end
     it 'should decode' do
       expect(priority2.f_type).to eq FrameType::PRIORITY

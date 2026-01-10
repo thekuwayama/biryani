@@ -58,49 +58,50 @@ module Biryani
       end
 
       # @param s [String]
+      # @param flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [Headers]
       # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/MethodLength
       # rubocop: disable Metrics/PerceivedComplexity
-      def self.read(s)
-        payload_length, _, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-
+      def self.read(s, flags, stream_id)
         priority = Frame.read_priority(flags)
         padded = Frame.read_padded(flags)
         end_headers = Frame.read_end_headers(flags)
         end_stream = Frame.read_end_stream(flags)
 
         if priority && padded
-          pad_length, stream_dependency, weight = s[9..14].unpack('CNC')
-          fragment_length = payload_length - pad_length - 6
+          io = IO::Buffer.for(s)
+          pad_length, stream_dependency, weight = io.get_values(%i[U8 U32 U8], 0)
+          fragment_length = s.bytesize - pad_length - 6
           # exclusive = (stream_dependency / 2**31).positive?
           stream_dependency %= 2**31
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'cannot depend on itself') if stream_dependency == stream_id
 
-          fragment = s[15...15 + fragment_length]
-          padding = s[15 + fragment_length..]
+          fragment = io.get_string(6, fragment_length)
+          padding = io.get_string(6 + fragment_length)
           return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
         elsif priority
-          stream_dependency, weight = s[9..13].unpack('NC')
+          io = IO::Buffer.for(s)
+          stream_dependency, weight = io.get_values(%i[U32 U8], 0)
           # exclusive = (stream_dependency / 2**31).positive?
           stream_dependency %= 2**31
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'cannot depend on itself') if stream_dependency == stream_id
 
-          fragment = s[14..]
-          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize + 5 != payload_length
+          fragment = io.get_string(5)
+          return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize + 5 != s.bytesize
         elsif padded
-          pad_length = s[9].unpack1('C')
-          fragment_length = payload_length - pad_length - 1
-          fragment = s[10...10 + fragment_length]
-          padding = s[10 + fragment_length..]
-          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= payload_length
+          io = IO::Buffer.for(s)
+          pad_length = io.get_value(:U8, 0)
+          fragment_length = s.bytesize - pad_length - 1
+          fragment = io.get_string(1, fragment_length)
+          padding = io.get_string(1 + fragment_length)
+          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= s.bytesize
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
-          fragment = s[9..]
-          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if fragment.bytesize != payload_length
+          fragment = s
         end
 
         Headers.new(end_headers, end_stream, stream_id, stream_dependency, weight, fragment, padding)

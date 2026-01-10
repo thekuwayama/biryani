@@ -28,14 +28,14 @@ module Biryani
       end
 
       # @param s [String]
+      # @param _flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [Goaway]
-      def self.read(s)
-        payload_length, _, _, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-
-        last_stream_id, error_code = s[9..16].unpack('NN')
-        debug = s[17..]
+      def self.read(s, _flags, stream_id)
+        io = IO::Buffer.for(s)
+        last_stream_id, error_code = io.get_values(%i[U32 U32], 0)
+        debug = io.get_string(8)
 
         Goaway.new(stream_id, last_stream_id, error_code, debug)
       end

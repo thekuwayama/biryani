@@ -32,16 +32,13 @@ module Biryani
       end
 
       # @param s [String]
+      # @param flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [Continuation]
-      def self.read(s)
-        payload_length, _, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-
+      def self.read(s, flags, stream_id)
         end_headers = Frame.read_end_headers(flags)
-        fragment = s[9..]
-
-        Continuation.new(end_headers, stream_id, fragment)
+        Continuation.new(end_headers, stream_id, s)
       end
     end
   end

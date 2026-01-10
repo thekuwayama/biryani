@@ -33,18 +33,18 @@ module Biryani
       end
 
       # @param s [String]
+      # @param flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [Settings]
       # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
       # rubocop: disable Metrics/PerceivedComplexity
-      def self.read(s)
-        payload_length, _, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'SETTINGS payload length MUST be a multiple of 6') if payload_length % 6 != 0
+      def self.read(s, flags, stream_id)
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'SETTINGS payload length MUST be a multiple of 6') if s.bytesize % 6 != 0
 
         ack = Frame.read_ack(flags)
-        setting = s[9..].unpack('nN' * (payload_length / 6)).each_slice(2).to_h
+        setting = s.unpack('nN' * (s.bytesize / 6)).each_slice(2).to_h
         return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'SETTINGS MUST NOT have setting with ack') \
           if ack && setting.any?
         return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid SETTINGS_ENABLE_PUSH') \

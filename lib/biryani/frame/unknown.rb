@@ -25,18 +25,6 @@ module Biryani
 
         Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + @payload
       end
-
-      # @param s [String]
-      #
-      # @return [Unknown]
-      def self.read(s)
-        payload_length, f_type, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-
-        payload = s[9..]
-
-        Unknown.new(f_type, flags, stream_id, payload)
-      end
     end
   end
 end

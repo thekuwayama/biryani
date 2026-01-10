@@ -10,7 +10,7 @@ RSpec.describe Frame::Ping do
     end
 
     let(:ping2) do
-      Frame::Ping.read("\x00\x00\x08\x06\x00\x00\x00\x00\x00\x64\x65\x61\x64\x62\x65\x65\x66".b)
+      Frame::Ping.read("\x64\x65\x61\x64\x62\x65\x65\x66".b, 0, 0)
     end
     it 'should decode' do
       expect(ping2.f_type).to eq FrameType::PING

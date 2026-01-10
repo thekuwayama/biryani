@@ -10,7 +10,7 @@ RSpec.describe Frame::Settings do
     end
 
     let(:settings2) do
-      Frame::Settings.read("\x00\x00\x0c\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x20\x00\x00\x03\x00\x00\x13\x88".b)
+      Frame::Settings.read("\x00\x01\x00\x00\x20\x00\x00\x03\x00\x00\x13\x88".b, 0, 0)
     end
     it 'should decode' do
       expect(settings2.f_type).to eq FrameType::SETTINGS
