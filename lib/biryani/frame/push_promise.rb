@@ -43,33 +43,32 @@ module Biryani
       end
 
       # @param s [String]
+      # @param flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [PushPromise]
-      # rubocop: disable Metrics/AbcSize
-      def self.read(s)
-        payload_length, _, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-
+      def self.read(s, flags, stream_id)
         padded = Frame.read_padded(flags)
         end_headers = Frame.read_end_headers(flags)
 
+        io = IO::Buffer.for(s)
         if padded
-          pad_length = s[9].unpack1('C')
-          promised_stream_id = s[10..13].unpack1('N')
-          fragment_length = payload_length - pad_length - 5
-          fragment = s[14...14 + fragment_length]
-          padding = s[14 + fragment_length..]
-          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= payload_length
+          pad_length, promised_stream_id = io.get_values(%i[U8 U32], 0)
+          promised_stream_id %= 2**31 # Promised Stream ID (31)
+          fragment_length = s.bytesize - pad_length - 5
+          fragment = io.get_string(5, fragment_length)
+          padding = io.get_string(5 + fragment_length)
+          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= s.bytesize
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
-          promised_stream_id = s[9..12].unpack1('N')
-          fragment = s[13..]
-          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if fragment.bytesize + 4 != payload_length
+          promised_stream_id = io.get_value(:U32, 0)
+          promised_stream_id %= 2**31 # Promised Stream ID (31)
+          fragment = io.get_string(4)
+          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if fragment.bytesize + 4 != s.bytesize
         end
 
         PushPromise.new(end_headers, stream_id, promised_stream_id, fragment, padding)
       end
-      # rubocop: enable Metrics/AbcSize
     end
   end
 end

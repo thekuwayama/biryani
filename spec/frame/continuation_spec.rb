@@ -17,7 +17,7 @@ RSpec.describe Frame::Continuation do
     end
 
     let(:continuation3) do
-      Frame::Continuation.read("\x00\x00\x00\x09\x00\x00\x00\x00\x32".b)
+      Frame::Continuation.read(''.b, 0, 50)
     end
     it 'should decode' do
       expect(continuation3.f_type).to eq FrameType::CONTINUATION
@@ -27,7 +27,7 @@ RSpec.describe Frame::Continuation do
     end
 
     let(:continuation4) do
-      Frame::Continuation.read("\x00\x00\x0d\x09\x00\x00\x00\x00\x32\x74\x68\x69\x73\x20\x69\x73\x20\x64\x75\x6d\x6d\x79".b)
+      Frame::Continuation.read("\x74\x68\x69\x73\x20\x69\x73\x20\x64\x75\x6d\x6d\x79".b, 9, 50)
     end
     it 'should decode' do
       expect(continuation4.f_type).to eq FrameType::CONTINUATION

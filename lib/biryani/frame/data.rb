@@ -41,26 +41,23 @@ module Biryani
       end
 
       # @param s [String]
+      # @param flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [Data]
-      def self.read(s)
-        payload_length, _, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-
+      def self.read(s, flags, stream_id)
         padded = Frame.read_padded(flags)
         end_stream = Frame.read_end_stream(flags)
 
         if padded
-          pad_length = s[9].unpack1('C')
-          data_length = payload_length - pad_length - 1
-          data = s[10...10 + data_length]
-          padding = s[10 + data_length..]
-          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= payload_length
+          io = IO::Buffer.for(s)
+          pad_length = io.get_value(:U8, 0)
+          data_length = s.bytesize - pad_length - 1
+          data = io.get_string(1, data_length)
+          padding = io.get_string(1 + data_length)
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
-          data = s[9..]
-          padding = nil
-          return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if data.bytesize != payload_length
+          data = s
         end
 
         Data.new(end_stream, stream_id, data, padding)

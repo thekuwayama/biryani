@@ -10,7 +10,7 @@ RSpec.describe Frame::WindowUpdate do
     end
 
     let(:window_update2) do
-      Frame::WindowUpdate.read("\x00\x00\x04\x08\x00\x00\x00\x00\x32\x00\x00\x03\xe8".b)
+      Frame::WindowUpdate.read("\x00\x00\x03\xe8".b, 0, 50)
     end
     it 'should decode' do
       expect(window_update2.f_type).to eq FrameType::WINDOW_UPDATE

@@ -32,17 +32,15 @@ module Biryani
       end
 
       # @param s [String]
+      # @param flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [Ping]
-      def self.read(s)
-        payload_length, _, flags, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'PING payload length MUST be 8') if s[9..].bytesize != 8
+      def self.read(s, flags, stream_id)
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'PING payload length MUST be 8') if s.bytesize != 8
 
         ack = Frame.read_ack(flags)
-        opaque = s[9..]
-
-        Ping.new(ack, stream_id, opaque)
+        Ping.new(ack, stream_id, s)
       end
     end
   end

@@ -37,11 +37,11 @@ module Biryani
     # @return [Integer]
     # @return [Integer]
     def self.read_header(s)
-      b0, b1, b2, f_type, uint8 = s[0..4].bytes
+      b0, b1, b2, f_type, flags, stream_id = s.unpack('CCCCCN')
       payload_length = (b0 << 16) | (b1 << 8) | b2
-      stream_id = s[5..8].unpack1('N') % 2**31 # Stream Identifier (31)
+      stream_id %= 2**31 # Stream Identifier (31)
 
-      [payload_length, f_type, uint8, stream_id]
+      [payload_length, f_type, flags, stream_id]
     end
 
     # @param uint8 [Integer]
@@ -136,9 +136,10 @@ module Biryani
 
       payload_length, f_type, flags, stream_id = read_header(s)
       payload = io.read(payload_length)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if payload.bytesize != payload_length
       return Frame::Unknown.new(f_type, flags, stream_id, payload) unless FRAME_MAP.key?(f_type)
 
-      FRAME_MAP[f_type].read(s + payload)
+      FRAME_MAP[f_type].read(payload, flags, stream_id)
     rescue StandardError
       ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame')
     end

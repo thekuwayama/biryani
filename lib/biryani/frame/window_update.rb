@@ -25,14 +25,14 @@ module Biryani
       end
 
       # @param s [String]
+      # @param _flags [Integer]
+      # @param stream_id [Integer]
       #
       # @return [WindowUpdate]
-      def self.read(s)
-        payload_length, _, _, stream_id = Frame.read_header(s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if s[9..].bytesize != payload_length
-        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'WINDOW_UPDATE payload length MUST be 4') if s[9..].bytesize != 4
+      def self.read(s, _flags, stream_id)
+        return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'WINDOW_UPDATE payload length MUST be 4') if s.bytesize != 4
 
-        window_size_increment = s[9..].unpack1('N')
+        window_size_increment = s.unpack1('N')
         return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'WINDOW_UPDATE invalid window size increment 0') if window_size_increment.zero?
         return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'WINDOW_UPDATE invalid window size increment greater than 2^31-1') if window_size_increment > 2**31 - 1
 

@@ -10,7 +10,7 @@ RSpec.describe Frame::RstStream do
     end
 
     let(:rst_stream2) do
-      Frame::RstStream.read("\x00\x00\x04\x03\x00\x00\x00\x00\x05\x00\x00\x00\x08".b)
+      Frame::RstStream.read("\x00\x00\x00\x08".b, 0, 5)
     end
     it 'should decode' do
       expect(rst_stream2.f_type).to eq FrameType::RST_STREAM
