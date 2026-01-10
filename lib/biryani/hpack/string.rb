@@ -31,7 +31,7 @@ module Biryani
       def self.decode(io, cursor)
         h = (io.get_value(:U8, cursor) & 0b10000000).positive?
         len, c = Integer.decode(io, 7, cursor)
-        return [Huffman.decode(io.get_string(c, len)), c + len] if h
+        return [Huffman.decode(io, c, len), c + len] if h
 
         [io.get_string(c, len), c + len]
       end
