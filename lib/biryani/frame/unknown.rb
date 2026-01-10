@@ -21,9 +21,7 @@ module Biryani
 
       # @return [String]
       def to_binary_s
-        payload_length = length
-
-        Frame.to_binary_s_header(payload_length, @f_type, flags, @stream_id) + @payload
+        Frame.to_binary_s_header(length, @f_type, @flags, @stream_id) + @payload
       end
     end
   end
