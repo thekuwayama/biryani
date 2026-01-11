@@ -11,7 +11,7 @@ module Biryani
         Ractor.new(socket.accept, @proc) do |io, proc|
           conn = Connection.new(proc)
           conn.serve(io)
-          io&.close
+          io.close
         end
       end
     end

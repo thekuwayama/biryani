@@ -47,7 +47,7 @@ module Biryani
     rescue StandardError
       self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
-      io&.close_write
+      io.close_write
     end
 
     # @param io [IO]
@@ -71,10 +71,9 @@ module Biryani
     def send_loop(io)
       loop do
         ports = @streams_ctx.txs
-        ports << @sock
-        next if ports.empty?
+        break if ports.empty? && @sock.closed?
 
-        port, obj = Ractor.select(*ports)
+        port, obj = Ractor.select(@sock, *ports)
         if port == @sock
           if Biryani.err?(obj)
             reply_frame = Biryani.unwrap(obj, @streams_ctx.last_stream_id)
