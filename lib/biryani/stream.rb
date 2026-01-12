@@ -11,7 +11,7 @@ module Biryani
           res = HTTPResponse.new(0, {}, '')
 
           proc.call(req, res)
-          tx << [res, stream_id]
+          tx.send([res, stream_id], move: true)
         end
       end
     end

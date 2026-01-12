@@ -44,7 +44,8 @@ module Biryani
 
       recv_loop(io.clone)
       send_loop(io)
-    rescue StandardError
+    rescue StandardError => e
+      puts e.backtrace
       self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
       io.close_write
@@ -57,7 +58,7 @@ module Biryani
           obj = Frame.read(io_)
           break if obj.nil?
 
-          sock_ << obj
+          sock_.send(obj, move: true)
         end
       end
     end
@@ -351,7 +352,7 @@ module Biryani
         obj = http_request(ctx.fragment, ctx.content, decoder)
         return obj if Biryani.err?(obj)
 
-        ctx.stream.rx << obj
+        ctx.stream.rx.send(obj, move: true)
       end
 
       window_updates = []
@@ -370,9 +371,9 @@ module Biryani
       ctx.fragment << headers.fragment
       if ctx.half_closed_remote?
         obj = http_request(ctx.fragment, ctx.content, decoder)
-        return [obj] if Biryani.err?(obj)
+        return obj if Biryani.err?(obj)
 
-        ctx.stream.rx << obj
+        ctx.stream.rx.send(obj, move: true)
       end
 
       nil
