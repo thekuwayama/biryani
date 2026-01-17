@@ -65,7 +65,8 @@ module Biryani
     #
     # @return [HTTPRequest]
     def build(s)
-      self.class.http_request(@h, s)
+      h = @h.transform_values(&:dup)
+      self.class.http_request(h, s)
     end
 
     # @param fields [Hash<String, String>]
