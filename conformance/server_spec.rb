@@ -8,7 +8,7 @@ RSpec.describe Server do
       server = Server.new(
         Ractor.shareable_proc do |_req, res|
           res.status = 200
-          res.content = 'Hello, world!'
+          res.content = 'OK'
         end
       )
 
