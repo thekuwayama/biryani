@@ -17,6 +17,7 @@ module Biryani
     # @raise [InvalidHTTPResponseError]
     # rubocop: disable Metrics/CyclomaticComplexity
     def validate
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-8.2.1
       raise Error::InvalidHTTPResponseError, 'invalid HTTP status' if @status < 100 || @status >= 600
       raise Error::InvalidHTTPResponseError, 'HTTP field name contains invalid characters' if (@fields.keys.join.downcase.bytes.uniq & FORBIDDEN_KEY_CHARS).any?
       raise Error::InvalidHTTPResponseError, 'HTTP field value contains NUL, LF or CR' if (@fields.values.join.bytes.uniq & FORBIDDEN_VALUE_CHARS).any?
