@@ -13,7 +13,6 @@ server = Biryani::Server.new(
   # @param res [Biryani::HTTPResponse]
   Ractor.shareable_proc do |req, res|
     res.status = 200
-
     res.content = if req.method.upcase == 'POST'
                     req.content
                   else
