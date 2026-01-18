@@ -9,8 +9,6 @@ port = ARGV[0] || 8888
 socket = TCPServer.new(port)
 
 server = Biryani::Server.new(
-  # @param _req [Biryani::HTTPRequest]
-  # @param res [Biryani::HTTPResponse]
   Ractor.shareable_proc do
     raise 'error'
   end
