@@ -10,6 +10,11 @@ module Biryani
     GOAWAY        = 0x07
     WINDOW_UPDATE = 0x08
     CONTINUATION  = 0x09
+
+    # @return [Boolean]
+    def self.unknown?(typ)
+      typ.negative? || typ > 0x09
+    end
   end
 
   module ErrorCode
