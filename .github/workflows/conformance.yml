@@ -34,7 +34,7 @@ jobs:
           set -eu
           curl -Ls https://github.com/summerwind/h2spec/releases/download/v2.6.0/h2spec_linux_amd64.tar.gz | tar xz
           mkdir -p $GITHUB_WORKSPACE/bin
-          mv h2spec  $GITHUB_WORKSPACE/bin/h2spec
+          mv h2spec $GITHUB_WORKSPACE/bin/h2spec
           chmod +x $GITHUB_WORKSPACE/bin/h2spec
           echo $GITHUB_WORKSPACE/bin >> $GITHUB_PATH
       - name: Run conformance test
@@ -43,3 +43,4 @@ jobs:
         if: success()
         with:
           report_paths: conformance/reports/h2spec.xml
+          detailed_summary: true
