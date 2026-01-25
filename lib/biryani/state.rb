@@ -127,7 +127,7 @@ module Biryani
       in [:half_closed_remote, FrameType::HEADERS, :send] if frame.end_stream?
         :sending_continuation
       in [:half_closed_remote, FrameType::HEADERS, :send]
-        :sending_continuation_data
+        :sending_continuation_and_data
       in [:half_closed_remote, FrameType::PRIORITY, :recv]
         state
       in [:half_closed_remote, FrameType::RST_STREAM, _]
@@ -139,18 +139,18 @@ module Biryani
       in [:half_closed_local, _, :send]
         unreachable(state, typ, direction)
 
-      # sending_continuation_data
-      in [:sending_continuation_data, FrameType::RST_STREAM, :send]
+      # sending_continuation_and_data
+      in [:sending_continuation_and_data, FrameType::RST_STREAM, :send]
         :closed
-      in [:sending_continuation_data, FrameType::WINDOW_UPDATE, :recv]
+      in [:sending_continuation_and_data, FrameType::WINDOW_UPDATE, :recv]
         state
-      in [:sending_continuation_data, FrameType::CONTINUATION, :send] if frame.end_headers?
+      in [:sending_continuation_and_data, FrameType::CONTINUATION, :send] if frame.end_headers?
         :sending_data
-      in [:sending_continuation_data, FrameType::CONTINUATION, :send]
+      in [:sending_continuation_and_data, FrameType::CONTINUATION, :send]
         state
-      in [:sending_continuation_data, _, :send]
+      in [:sending_continuation_and_data, _, :send]
         unreachable(state, typ, direction)
-      in [:sending_continuation_data, _, :recv]
+      in [:sending_continuation_and_data, _, :recv]
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
 
       # sending_continuation
