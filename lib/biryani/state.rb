@@ -65,7 +65,7 @@ module Biryani
       in [:idle, FrameType::HEADERS, :recv] if frame.end_stream?
         :receiving_continuation
       in [:idle, FrameType::HEADERS, :recv]
-        :receiving_continuation_data
+        :receiving_continuation_and_data
       in [:idle, FrameType::PRIORITY, :recv]
         state
       in [:idle, FrameType::PUSH_PROMISE, :send]
@@ -73,16 +73,16 @@ module Biryani
       in [:idle, _, _]
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
 
-      # receiving_continuation_data
-      in [:receiving_continuation_data, FrameType::RST_STREAM, _]
+      # receiving_continuation_and_data
+      in [:receiving_continuation_and_data, FrameType::RST_STREAM, _]
         :closed
-      in [:receiving_continuation_data, FrameType::WINDOW_UPDATE, :recv]
+      in [:receiving_continuation_and_data, FrameType::WINDOW_UPDATE, :recv]
         state
-      in [:receiving_continuation_data, FrameType::CONTINUATION, :recv] if frame.end_headers?
+      in [:receiving_continuation_and_data, FrameType::CONTINUATION, :recv] if frame.end_headers?
         :receiving_data
-      in [:receiving_continuation_data, FrameType::CONTINUATION, :recv]
+      in [:receiving_continuation_and_data, FrameType::CONTINUATION, :recv]
         state
-      in [:receiving_continuation_data, _, _]
+      in [:receiving_continuation_and_data, _, _]
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
 
       # receiving_continuation
@@ -233,6 +233,11 @@ module Biryani
     # @return [Boolean]
     def half_closed_remote?
       @state == :half_closed_remote
+    end
+
+    # @return [Boolean]
+    def receiving_continuation?
+      %i[receiving_continuation receiving_continuation_and_data].include?(@state)
     end
   end
 end
