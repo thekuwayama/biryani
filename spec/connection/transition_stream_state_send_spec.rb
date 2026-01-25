@@ -1,7 +1,7 @@
 require_relative '../spec_helper'
 
 RSpec.describe Connection do
-  context 'transition_state_send' do
+  context 'transition_stream_state_send' do
     let(:streams_ctx) do
       streams_ctx = StreamsContext.new(do_nothing_proc)
       streams_ctx.new_context(1, 65_535, 65_535)
@@ -14,7 +14,7 @@ RSpec.describe Connection do
     end
     it 'should transition' do
       streams_ctx[2].state.transition!(headers, :recv)
-      Connection.transition_state_send(headers, streams_ctx)
+      Connection.transition_stream_state_send(headers, streams_ctx)
       expect(streams_ctx.length).to eq 2
     end
 
@@ -31,7 +31,7 @@ RSpec.describe Connection do
     end
     it 'should transition' do
       streams_ctx[2].state.transition!(headers, :recv)
-      Connection.transition_state_send(rst_stream, streams_ctx)
+      Connection.transition_stream_state_send(rst_stream, streams_ctx)
       expect { streams_ctx[1].tx << nil }.to_not raise_error
       expect { streams_ctx[2].tx << nil }.to_not raise_error
     end
