@@ -79,7 +79,7 @@ module Biryani
           if Biryani.err?(obj)
             reply_frame = Biryani.unwrap(obj, @streams_ctx.last_stream_id)
             self.class.do_send(io, reply_frame, true)
-            close if self.class.transition_state_send(reply_frame, @streams_ctx)
+            close if self.class.transition_stream_state_send(reply_frame, @streams_ctx)
           elsif obj.length > @settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
             self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
@@ -93,7 +93,7 @@ module Biryani
                 @streams_ctx[reply_frame.stream_id].recv_window.increase!(reply_frame.window_size_increment)
               end
 
-              close if self.class.transition_state_send(reply_frame, @streams_ctx)
+              close if self.class.transition_stream_state_send(reply_frame, @streams_ctx)
             end
           end
         else
@@ -129,8 +129,12 @@ module Biryani
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     # rubocop: disable Metrics/CyclomaticComplexity
+    # rubocop: disable Metrics/PerceivedComplexity
     def handle_connection_frame(frame)
       typ = frame.f_type
+      return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
+        if @streams_ctx.receiving_continuation? && ([FrameType::SETTINGS, FrameType::PING, FrameType::WINDOW_UPDATE].include?(typ) || FrameType.unknown?(typ))
+
       case typ
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
@@ -163,6 +167,7 @@ module Biryani
       end
     end
     # rubocop: enable Metrics/CyclomaticComplexity
+    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param frame [Object]
     #
@@ -179,7 +184,7 @@ module Biryani
       max_streams = @peer_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]
       send_initial_window_size = @peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       recv_initial_window_size = @settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
-      obj = self.class.transition_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
+      obj = self.class.transition_stream_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
       return [obj] if Biryani.err?(obj)
 
       ctx = obj
@@ -241,7 +246,7 @@ module Biryani
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
-    def self.transition_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
+    def self.transition_stream_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
       ctx = streams_ctx[stream_id]
       return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
@@ -260,7 +265,7 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     #
     # @return [Boolean] should close connection?
-    def self.transition_state_send(send_frame, streams_ctx)
+    def self.transition_stream_state_send(send_frame, streams_ctx)
       stream_id = send_frame.stream_id
       typ = send_frame.f_type
       case typ
@@ -297,7 +302,7 @@ module Biryani
         do_send(io, frame, false)
         send_window.consume!(frame.length)
         streams_ctx[stream_id].send_window.consume!(frame.length)
-        transition_state_send(frame, streams_ctx)
+        transition_stream_state_send(frame, streams_ctx)
       end
 
       data_buffer.store(stream_id, remains) unless remains.empty?
@@ -322,7 +327,7 @@ module Biryani
 
       frames.each do |frame|
         do_send(io, frame, false)
-        transition_state_send(frame, streams_ctx)
+        transition_stream_state_send(frame, streams_ctx)
       end
     end
 
