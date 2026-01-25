@@ -11,6 +11,9 @@ on:
 jobs:
   conformance:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     strategy:
       matrix:
         ruby-version: ['4.0']
