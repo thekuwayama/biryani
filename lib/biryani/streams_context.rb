@@ -47,6 +47,11 @@ module Biryani
       @h.values.filter(&:active?).length
     end
 
+    # @return [Boolean]
+    def receiving_continuation?
+      @h.values.any?(&:receiving_continuation?)
+    end
+
     # @return [Array<Integer>]
     def closed_stream_ids
       @h.filter { |_, ctx| ctx.closed? }.keys
@@ -130,6 +135,11 @@ module Biryani
     # @return [Boolean]
     def half_closed_remote?
       @state.half_closed_remote?
+    end
+
+    # @return [Boolean]
+    def receiving_continuation?
+      @state.receiving_continuation?
     end
   end
 end
