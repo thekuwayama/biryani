@@ -118,6 +118,10 @@ module Biryani
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     def recv_dispatch(frame)
+      receiving_continuation_stream_id = @streams_ctx.receiving_continuation_stream_id
+      return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
+        if !receiving_continuation_stream_id.nil? && frame.stream_id != receiving_continuation_stream_id
+
       if frame.stream_id.zero?
         handle_connection_frame(frame)
       else
@@ -129,13 +133,8 @@ module Biryani
     #
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     # rubocop: disable Metrics/CyclomaticComplexity
-    # rubocop: disable Metrics/PerceivedComplexity
     def handle_connection_frame(frame)
-      typ = frame.f_type
-      return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
-        if @streams_ctx.receiving_continuation? && ([FrameType::SETTINGS, FrameType::PING, FrameType::WINDOW_UPDATE].include?(typ) || FrameType.unknown?(typ))
-
-      case typ
+      case frame.f_type
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
       when FrameType::SETTINGS
@@ -167,7 +166,6 @@ module Biryani
       end
     end
     # rubocop: enable Metrics/CyclomaticComplexity
-    # rubocop: enable Metrics/PerceivedComplexity
 
     # @param frame [Object]
     #
