@@ -47,9 +47,9 @@ module Biryani
       @h.values.filter(&:active?).length
     end
 
-    # @return [Boolean]
-    def receiving_continuation?
-      @h.values.any?(&:receiving_continuation?)
+    # @return [Integer, nil]
+    def receiving_continuation_stream_id
+      @h.find { |_, ctx| ctx.receiving_continuation? }&.first
     end
 
     # @return [Array<Integer>]
