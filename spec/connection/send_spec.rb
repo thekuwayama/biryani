@@ -22,7 +22,7 @@ RSpec.describe Connection do
       streams_ctx
     end
     it 'should send' do
-      streams_ctx1[2].state.transition!(headers1, :recv)
+      streams_ctx1[2].state_transition!(headers1, :recv)
       Connection.send_headers(io, 2, "\x88".b, false, 16_384, streams_ctx1)
       Connection.send_data(io, 2, 'Hello, world!'.b, send_window1, 16_384, streams_ctx1, data_buffer)
       expect(io.string.force_encoding(Encoding::ASCII_8BIT)).to eq "\x00\x00\x01\x01\x04\x00\x00\x00\x02\x88\x00\x00\x0d\x00\x01\x00\x00\x00\x02Hello, world!".b
@@ -45,7 +45,7 @@ RSpec.describe Connection do
       streams_ctx
     end
     it 'should send' do
-      streams_ctx2[1].state.transition!(headers2, :recv)
+      streams_ctx2[1].state_transition!(headers2, :recv)
       Connection.send_headers(io, 1, "\x88".b, true, 16_384, streams_ctx2)
       expect(io.string.force_encoding(Encoding::ASCII_8BIT)).to eq "\x00\x00\x01\x01\x05\x00\x00\x00\x01\x88".b
       expect(send_window2.length).to eq 65_535
@@ -68,7 +68,7 @@ RSpec.describe Connection do
       streams_ctx
     end
     it 'should send' do
-      streams_ctx3[2].state.transition!(headers3, :recv)
+      streams_ctx3[2].state_transition!(headers3, :recv)
       Connection.send_data(io, 2, 'Hello, world!'.b, send_window3, 16_384, streams_ctx3, data_buffer)
       expect(io.string.force_encoding(Encoding::ASCII_8BIT)).to eq ''.b
       expect(send_window3.length).to eq 65_535
@@ -92,7 +92,7 @@ RSpec.describe Connection do
       streams_ctx
     end
     it 'should send' do
-      streams_ctx4[2].state.transition!(headers4, :recv)
+      streams_ctx4[2].state_transition!(headers4, :recv)
       Connection.send_data(io, 2, 'Hello, world!'.b, send_window4, 16_384, streams_ctx4, data_buffer)
       expect(io.string.force_encoding(Encoding::ASCII_8BIT)).to eq ''.b
       expect(send_window4.length).to eq 0

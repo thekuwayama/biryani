@@ -95,13 +95,13 @@ module Biryani
     def close_all
       each do |ctx|
         ctx.tx.close
-        ctx.state.close
+        ctx.close
       end
     end
   end
 
   class StreamContext
-    attr_accessor :stream, :tx, :send_window, :recv_window, :fragment, :content, :state
+    attr_accessor :tx, :send_window, :recv_window, :fragment, :content
 
     # @param stream_id [Integer]
     # @param send_initial_window_size [Integer]
@@ -115,6 +115,21 @@ module Biryani
       @fragment = ''.b
       @content = ''.b
       @state = State.new
+    end
+
+    # @param req [HTTPRequest]
+    def <<(req)
+      @stream.rx.send(req, move: true)
+    end
+
+    def close
+      @state.close
+    end
+
+    # @param frame [Object]
+    # @param direction [:send, :recv]
+    def state_transition!(frame, direction)
+      @state.transition!(frame, direction)
     end
 
     # @return [Boolean]
