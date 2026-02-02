@@ -251,7 +251,7 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'new stream identifier is less than the existing stream identifiers') if ctx.nil? && streams_ctx.last_stream_id > stream_id
 
       ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size) if ctx.nil?
-      obj = ctx.state.transition!(recv_frame, :recv)
+      obj = ctx.state_transition!(recv_frame, :recv)
       return obj if Biryani.err?(obj)
 
       ctx
@@ -273,7 +273,7 @@ module Biryani
         streams_ctx.close_all
         true
       else
-        streams_ctx[stream_id].state.transition!(send_frame, :send) unless stream_id.zero?
+        streams_ctx[stream_id].state_transition!(send_frame, :send) unless stream_id.zero?
         false
       end
     end
@@ -355,7 +355,7 @@ module Biryani
         obj = http_request(ctx.fragment, ctx.content, decoder)
         return obj if Biryani.err?(obj)
 
-        ctx.stream.rx.send(obj, move: true)
+        ctx << obj
       end
 
       window_updates = []
@@ -376,7 +376,7 @@ module Biryani
         obj = http_request(ctx.fragment, ctx.content, decoder)
         return obj if Biryani.err?(obj)
 
-        ctx.stream.rx.send(obj, move: true)
+        ctx << obj
       end
 
       nil
@@ -385,7 +385,7 @@ module Biryani
     # @param _rst_stream [RstStream]
     # @param ctx [StreamContext]
     def self.handle_rst_stream(_rst_stream, ctx)
-      ctx.state.close
+      ctx.close
     end
 
     # @param settings [Settings]
