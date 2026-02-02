@@ -26,6 +26,7 @@ module Biryani
     # @param value [String]
     #
     # @return [nil, ConnectioError]
+    # rubocop: disable Metrics/AbcSize
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
     def field(name, value)
@@ -35,8 +36,7 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'duplicated pseudo-header fields') if PSEUDO_HEADER_FIELDS.include?(name) && @h.key?(name)
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid `#{name}` field") if PSEUDO_HEADER_FIELDS.include?(name) && value.empty?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is forbidden') if name == 'connection'
-
-      # TODO: trailers
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, '`TE` field has a value other than `trailers`') if name == 'te' && value != 'trailers'
 
       if name == 'cookie' && @h.key?('cookie')
         @h[name] << "; #{value}"
@@ -46,6 +46,7 @@ module Biryani
 
       nil
     end
+    # rubocop: enable Metrics/AbcSize
     # rubocop: enable Metrics/CyclomaticComplexity
     # rubocop: enable Metrics/PerceivedComplexity
 
