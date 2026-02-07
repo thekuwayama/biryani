@@ -10,6 +10,7 @@ Metrics/AbcSize:
 Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
+    - 'conformance/**/*'
 
 Metrics/ClassLength:
   Max: 200

@@ -12,6 +12,7 @@
 /rdoc/
 /coverage/
 /spec/reports/
+/conformance/reports/
 /tmp/
 .DS_Store
 Gemfile.lock

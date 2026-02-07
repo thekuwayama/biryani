@@ -7,6 +7,7 @@ include Biryani
 # rubocop: enable Style/MixinUsage
 
 PORT = 8888
+JUNIT_REPORT_DIR = "#{__dir__}/reports".freeze
 
 def which(cmd)
   o, = Open3.capture3("which #{cmd}")

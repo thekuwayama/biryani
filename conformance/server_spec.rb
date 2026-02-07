@@ -16,9 +16,16 @@ RSpec.describe Server do
     end
   end
 
+  let(:junit_report_file_path) do
+    Dir.mkdir(JUNIT_REPORT_DIR) unless Dir.exist?(JUNIT_REPORT_DIR)
+
+    "#{JUNIT_REPORT_DIR}/h2spec.xml"
+  end
+
   let(:client) do
     which('h2spec')
-    "h2spec --port #{PORT} --verbose"
+
+    "h2spec --port #{PORT} --verbose --junit-report #{junit_report_file_path}"
   end
 
   after do
