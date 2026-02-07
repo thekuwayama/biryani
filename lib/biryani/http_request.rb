@@ -13,10 +13,10 @@ module Biryani
       @content = content
     end
 
-    # @return [Array<String>]
+    # @return [Array<String>, nil]
     def trailers
       # https://datatracker.ietf.org/doc/html/rfc9110#section-6.6.2-4
-      keys = (@fields['trailer'] || '').split(',').map(&:strip)
+      keys = (@fields['trailer'] || []).map { |x| x.split(',').map(&:strip) }.flatten
       @fields.slice(*keys)
     end
   end
