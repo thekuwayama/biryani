@@ -6,7 +6,7 @@ RSpec.describe Server do
 
     Ractor.new(@tcpserver) do |socket|
       server = Server.new(
-        Ractor.shareable_proc do |_req, res|
+        Ractor.shareable_proc do |_, res|
           res.status = 200
           res.content = 'OK'
         end
