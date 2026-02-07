@@ -45,13 +45,8 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is forbidden') if name == 'connection'
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, '`TE` field has a value other than `trailers`') if name == 'te' && value != 'trailers'
 
-      if name == 'cookie' && @h.key?('cookie')
-        @h[name][0] << "; #{value}"
-      elsif @h.key?(name)
-        @h[name] << value
-      else
-        @h[name] = [value]
-      end
+      @h[name] = [] unless @h.key?(name)
+      @h[name] << value
 
       nil
     end
@@ -79,16 +74,21 @@ module Biryani
       self.class.http_request(h, s)
     end
 
-    # @param fields [Hash<String, Array<String>>]
+    # @param h [Hash<String, Array<String>>]
     # @param s [String]
     #
     # @return [HTTPRequest, ConnectionError]
-    def self.http_request(fields, s)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| fields.key?(x) }
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if fields.key?('content-length') && !s.empty? && s.length != fields['content-length'].to_i
+    def self.http_request(h, s)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| h.key?(x) }
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if h.key?('content-length') && !s.empty? && s.length != h['content-length'].to_i
 
-      uri = URI("#{fields[':scheme'][0]}://#{fields[':authority'][0]}#{fields[':path'][0]}")
-      HTTPRequest.new(fields[':method'][0], uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) }, s)
+      scheme = h[':scheme'][0]
+      domain = h[':authority'][0]
+      path = h[':path'][0]
+      uri = URI("#{scheme}://#{domain}#{path}")
+      method = h[':method'][0]
+      h['cookie'] = [h['cookie'].join('; ')] if h.key?('cookie')
+      HTTPRequest.new(method, uri, h, s)
     end
   end
 end
