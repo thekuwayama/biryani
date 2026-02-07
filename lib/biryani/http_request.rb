@@ -4,7 +4,7 @@ module Biryani
 
     # @param method [String]
     # @param uri [URI]
-    # @param fields [Hash<String, String>]
+    # @param fields [Hash<String, Array<String>>]
     # @param content [String]
     def initialize(method, uri, fields, content)
       @method = method
@@ -13,10 +13,10 @@ module Biryani
       @content = content
     end
 
-    # @return [Array<String>]
+    # @return [Array<String>, nil]
     def trailers
       # https://datatracker.ietf.org/doc/html/rfc9110#section-6.6.2-4
-      keys = (@fields['trailer'] || '').split(',').map(&:strip)
+      keys = (@fields['trailer'] || []).flat_map { |x| x.split(',').map(&:strip) }
       @fields.slice(*keys)
     end
   end
@@ -45,11 +45,8 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'connection-specific field is forbidden') if name == 'connection'
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, '`TE` field has a value other than `trailers`') if name == 'te' && value != 'trailers'
 
-      if name == 'cookie' && @h.key?('cookie')
-        @h[name] << "; #{value}"
-      else
-        @h[name] = value
-      end
+      @h[name] = [] unless @h.key?(name)
+      @h[name] << value
 
       nil
     end
@@ -77,16 +74,21 @@ module Biryani
       self.class.http_request(h, s)
     end
 
-    # @param fields [Hash<String, String>]
+    # @param h [Hash<String, Array<String>>]
     # @param s [String]
     #
     # @return [HTTPRequest, ConnectionError]
-    def self.http_request(fields, s)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| fields.key?(x) }
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if fields.key?('content-length') && !s.empty? && s.length != fields['content-length'].to_i
+    def self.http_request(h, s)
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| h.key?(x) }
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if h.key?('content-length') && !s.empty? && s.length != h['content-length'].to_i
 
-      uri = URI("#{fields[':scheme']}://#{fields[':authority']}#{fields[':path']}")
-      HTTPRequest.new(fields[':method'], uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) }, s)
+      scheme = h[':scheme'][0]
+      domain = h[':authority'][0]
+      path = h[':path'][0]
+      uri = URI("#{scheme}://#{domain}#{path}")
+      method = h[':method'][0]
+      h['cookie'] = [h['cookie'].join('; ')] if h.key?('cookie')
+      HTTPRequest.new(method, uri, h, s)
     end
   end
 end

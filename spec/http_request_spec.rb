@@ -1,5 +1,22 @@
 require_relative 'spec_helper'
 
+RSpec.describe HTTPRequest do
+  context 'trailers' do
+    it 'should be empty' do
+      expect(HTTPRequest.new('get', 'http://localhost:8888/', {}, '').trailers.empty?).to eq true
+    end
+
+    let(:req) do
+      HTTPRequest.new('get', 'http://localhost:8888/', { 'trailer' => %w[a b], 'a' => ['1'], 'b' => ['2'], 'c' => ['3'] }, '')
+    end
+    it 'should return' do
+      expect(req.trailers['a']).to eq ['1']
+      expect(req.trailers['b']).to eq ['2']
+      expect(req.trailers['c']).to eq nil
+    end
+  end
+end
+
 RSpec.describe HTTPRequestBuilder do
   context 'field' do
     let(:builder) do
@@ -39,7 +56,7 @@ RSpec.describe HTTPRequestBuilder do
       builder.build('')
     end
     it 'should field' do
-      expect(request.fields['cookie']).to eq 'a=1; b=2; c=3; d=4'
+      expect(request.fields['cookie']).to eq ['a=1; b=2; c=3; d=4']
     end
   end
 end
