@@ -12,6 +12,13 @@ module Biryani
       @fields = fields
       @content = content
     end
+
+    # @return [Array<String>]
+    def trailers
+      # https://datatracker.ietf.org/doc/html/rfc9110#section-6.6.2-4
+      keys = (@fields['trailer'] || '').split(',').map(&:strip)
+      @fields.slice(*keys)
+    end
   end
 
   class HTTPRequestBuilder

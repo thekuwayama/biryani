@@ -56,58 +56,82 @@ module Biryani
     # rubocop: disable Metrics/PerceivedComplexity
     def self.next(state, frame, direction)
       typ = frame.f_type
-      case [state, typ, direction]
+      case [state, direction, typ]
       # idle
-      in [:idle, FrameType::HEADERS, :recv] if frame.end_stream? && frame.end_headers?
-        :half_closed_remote
-      in [:idle, FrameType::HEADERS, :recv] if frame.end_headers?
-        :receiving_data
-      in [:idle, FrameType::HEADERS, :recv] if frame.end_stream?
-        :receiving_continuation
-      in [:idle, FrameType::HEADERS, :recv]
-        :receiving_continuation_and_data
-      in [:idle, FrameType::PRIORITY, :recv]
-        state
-      in [:idle, FrameType::PUSH_PROMISE, :send]
+      in [:idle, :send, FrameType::PUSH_PROMISE]
         :reserved_local
-      in [:idle, _, _]
-        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:idle, :recv, FrameType::HEADERS] if frame.end_stream? && frame.end_headers?
+        :half_closed_remote
+      in [:idle, :recv, FrameType::HEADERS] if frame.end_headers?
+        :receiving_data
+      in [:idle, :recv, FrameType::HEADERS] if frame.end_stream?
+        :receiving_continuation
+      in [:idle, :recv, FrameType::HEADERS]
+        :receiving_continuation_and_data
+      in [:idle, :recv, FrameType::PRIORITY]
+        state
 
       # receiving_continuation_and_data
-      in [:receiving_continuation_and_data, FrameType::RST_STREAM, _]
-        :closed
-      in [:receiving_continuation_and_data, FrameType::WINDOW_UPDATE, :recv]
+      in [:receiving_continuation_and_data, :recv, FrameType::WINDOW_UPDATE]
         state
-      in [:receiving_continuation_and_data, FrameType::CONTINUATION, :recv] if frame.end_headers?
+      in [:receiving_continuation_and_data, :recv, FrameType::CONTINUATION] if frame.end_headers?
         :receiving_data
-      in [:receiving_continuation_and_data, FrameType::CONTINUATION, :recv]
+      in [:receiving_continuation_and_data, :recv, FrameType::CONTINUATION]
         state
-      in [:receiving_continuation_and_data, _, _]
-        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:receiving_continuation_and_data, _, FrameType::RST_STREAM]
+        :closed
 
       # receiving_continuation
-      in [:receiving_continuation, FrameType::RST_STREAM, _]
-        :closed
-      in [:receiving_continuation, FrameType::WINDOW_UPDATE, :recv]
-        state
-      in [:receiving_continuation, FrameType::CONTINUATION, :recv] if frame.end_headers?
+      in [:receiving_continuation, :recv, FrameType::DATA] if frame.end_stream?
         :half_closed_remote
-      in [:receiving_continuation, FrameType::CONTINUATION, :recv]
+      in [:receiving_continuation, :recv, FrameType::DATA]
+        :receiving_data
+      in [:receiving_continuation, :recv, FrameType::WINDOW_UPDATE]
         state
-      in [:receiving_continuation, _, _]
-        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:receiving_continuation, :recv, FrameType::CONTINUATION] if frame.end_headers?
+        :half_closed_remote
+      in [:receiving_continuation, :recv, FrameType::CONTINUATION]
+        state
+      in [:receiving_continuation, _, FrameType::RST_STREAM]
+        :closed
 
       # receiving_data
-      in [:receiving_data, FrameType::DATA, :recv] if frame.end_stream?
+      in [:receiving_data, :recv, FrameType::DATA] if frame.end_stream?
         :half_closed_remote
-      in [:receiving_data, FrameType::DATA, :recv]
+      in [:receiving_data, :recv, FrameType::DATA]
         state
-      in [:receiving_data, FrameType::RST_STREAM, _]
-        :closed
-      in [:receiving_data, FrameType::WINDOW_UPDATE, _]
-        state
-      in [:receiving_data, _, _]
+      in [:receiving_data, :recv, FrameType::HEADERS] if !frame.end_stream?
         unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:receiving_data, :recv, FrameType::HEADERS] if frame.end_headers?
+        :half_closed_remote
+      in [:receiving_data, :recv, FrameType::HEADERS]
+        :receiving_trailer_continuation
+      in [:receiving_data, :recv, FrameType::PRIORITY]
+        state
+      in [:receiving_data, _, FrameType::RST_STREAM]
+        :closed
+      in [:receiving_data, _, FrameType::WINDOW_UPDATE]
+        state
+
+      # receiving_trailer_headers
+      in [:receiving_trailer_headers, :recv, FrameType::HEADERS] if !frame.end_stream?
+        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:receiving_trailer_headers, :recv, FrameType::HEADERS] if frame.end_headers?
+        :half_closed_remote
+      in [:receiving_trailer_headers, :recv, FrameType::HEADERS]
+        :receiving_trailer_continuation
+      in [:receiving_trailer_headers, :recv, FrameType::WINDOW_UPDATE]
+        state
+
+      # receiving_trailer_continuation
+      in [:receiving_trailer_continuation, :recv, FrameType::WINDOW_UPDATE]
+        state
+      in [:receiving_trailer_continuation, :recv, FrameType::CONTINUATION] if frame.end_headers?
+        :half_closed_remote
+      in [:receiving_trailer_continuation, :recv, FrameType::CONTINUATION]
+        :receiving_trailer_continuation
+      in [:receiving_trailer_continuation, _, FrameType::RST_STREAM]
+        :closed
 
       # reserved_remote
       in [:reserved_remote, _, _]
@@ -120,81 +144,75 @@ module Biryani
         state
 
       # half_closed_remote
-      in [:half_closed_remote, FrameType::HEADERS, :send] if frame.end_stream? && frame.end_headers?
+      in [:half_closed_remote, :send, FrameType::HEADERS] if frame.end_stream? && frame.end_headers?
         :closed
-      in [:half_closed_remote, FrameType::HEADERS, :send] if frame.end_headers?
+      in [:half_closed_remote, :send, FrameType::HEADERS] if frame.end_headers?
         :sending_data
-      in [:half_closed_remote, FrameType::HEADERS, :send] if frame.end_stream?
+      in [:half_closed_remote, :send, FrameType::HEADERS] if frame.end_stream?
         :sending_continuation
-      in [:half_closed_remote, FrameType::HEADERS, :send]
+      in [:half_closed_remote, :send, FrameType::HEADERS]
         :sending_continuation_and_data
-      in [:half_closed_remote, FrameType::PRIORITY, :recv]
+      in [:half_closed_remote, :recv, FrameType::PRIORITY]
         state
-      in [:half_closed_remote, FrameType::RST_STREAM, _]
+      in [:half_closed_remote, _, FrameType::RST_STREAM]
         :closed
-      in [:half_closed_remote, FrameType::WINDOW_UPDATE, _]
+      in [:half_closed_remote, _, FrameType::WINDOW_UPDATE]
         state
-      in [:half_closed_remote, _, :recv]
-        unexpected(ErrorCode::STREAM_CLOSED, state, typ, direction)
-      in [:half_closed_local, _, :send]
-        unreachable(state, typ, direction)
 
       # sending_continuation_and_data
-      in [:sending_continuation_and_data, FrameType::RST_STREAM, :send]
-        :closed
-      in [:sending_continuation_and_data, FrameType::WINDOW_UPDATE, :recv]
-        state
-      in [:sending_continuation_and_data, FrameType::CONTINUATION, :send] if frame.end_headers?
+      in [:sending_continuation_and_data, :send, FrameType::CONTINUATION] if frame.end_headers?
         :sending_data
-      in [:sending_continuation_and_data, FrameType::CONTINUATION, :send]
+      in [:sending_continuation_and_data, :send, FrameType::CONTINUATION]
         state
-      in [:sending_continuation_and_data, _, :send]
+      in [:sending_continuation_and_data, :send, _]
         unreachable(state, typ, direction)
-      in [:sending_continuation_and_data, _, :recv]
-        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:sending_continuation_and_data, :recv, FrameType::PRIORITY]
+        state
+      in [:sending_continuation_and_data, :recv, FrameType::WINDOW_UPDATE]
+        state
+      in [:sending_continuation_and_data, _, FrameType::RST_STREAM]
+        :closed
 
       # sending_continuation
-      in [:sending_continuation, FrameType::RST_STREAM, :send]
+      in [:sending_continuation, :send, FrameType::CONTINUATION] if frame.end_headers?
         :closed
-      in [:sending_continuation, FrameType::WINDOW_UPDATE, :recv]
+      in [:sending_continuation, :send, FrameType::CONTINUATION]
         state
-      in [:sending_continuation, FrameType::CONTINUATION, :send] if frame.end_headers?
-        :closed
-      in [:sending_continuation, FrameType::CONTINUATION, :send]
-        state
-      in [:sending_continuation, _, :send]
+      in [:sending_continuation, :send, _]
         unreachable(state, typ, direction)
-      in [:sending_continuation, _, :recv]
-        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:sending_continuation, :recv, FrameType::PRIORITY]
+        state
+      in [:sending_continuation, :recv, FrameType::WINDOW_UPDATE]
+        state
+      in [:sending_continuation, _, FrameType::RST_STREAM]
+        :closed
 
       # sending_data
-      in [:sending_data, FrameType::DATA, :send] if frame.end_stream?
+      in [:sending_data, :send, FrameType::DATA] if frame.end_stream?
         :closed
-      in [:sending_data, FrameType::WINDOW_UPDATE, :recv]
+      in [:sending_data, :send, FrameType::DATA]
         state
-      in [:sending_data, FrameType::DATA, :send]
-        state
-      in [:sending_data, FrameType::RST_STREAM, :send]
-        :closed
-      in [:sending_continuation, _, :send]
+      in [:sending_data, :send, _]
         unreachable(state, typ, direction)
-      in [:sending_continuation, _, :recv]
-        unexpected(ErrorCode::PROTOCOL_ERROR, state, typ, direction)
+      in [:sending_data, :recv, FrameType::PRIORITY]
+        state
+      in [:sending_data, :recv, FrameType::WINDOW_UPDATE]
+        state
+      in [:sending_data, _, FrameType::RST_STREAM]
+        :closed
 
       # closed
-      in [:closed, FrameType::PRIORITY, :recv]
-        state
-      in [:closed, FrameType::RST_STREAM, :recv]
-        state
-      in [:closed, _, :send]
+      in [:closed, :send, _]
         unreachable(state, typ, direction)
-      in [:closed, _, :recv]
-        unexpected(ErrorCode::STREAM_CLOSED, state, typ, direction)
+      in [:closed, :recv, FrameType::PRIORITY]
+        state
+      in [:closed, _, FrameType::RST_STREAM]
+        state
 
       # other
-      in [_, _, :send]
+      in [_, :send, _]
         unreachable(state, typ, direction)
-      in [_, _, :recv]
+      in [_, :recv, _]
         unexpected(ErrorCode::STREAM_CLOSED, state, typ, direction)
       end
     end
