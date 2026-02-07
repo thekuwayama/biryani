@@ -70,7 +70,8 @@ module Biryani
     #
     # @return [HTTPRequest]
     def build(s)
-      h = @h.transform_values(&:dup)
+      # `Ractor.send(req, move: true)` moves entries in HPACK::DynamicTable; therefore, a `dup` call is required.
+      h = @h.transform_values { |x| x.map(&:dup) }
       self.class.http_request(h, s)
     end
 

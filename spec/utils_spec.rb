@@ -17,11 +17,11 @@ RSpec.describe Biryani do
     end
 
     it 'should be error' do
-      expect(Biryani.err?(connection_error)).to be true
+      expect(Biryani.err?(connection_error)).to eq true
     end
 
     it 'should be error' do
-      expect(Biryani.err?(stream_error)).to be true
+      expect(Biryani.err?(stream_error)).to eq true
     end
   end
 

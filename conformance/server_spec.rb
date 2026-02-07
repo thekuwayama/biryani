@@ -22,17 +22,24 @@ RSpec.describe Server do
     "#{JUNIT_REPORT_DIR}/h2spec.xml"
   end
 
-  let(:client) do
+  after do
+    @tcpserver.close
+  end
+
+  let(:h2spec) do
     which('h2spec')
 
     "h2spec --port #{PORT} --verbose --junit-report #{junit_report_file_path}"
   end
 
-  after do
-    @tcpserver.close
+  let(:curl) do
+    which('curl')
+
+    "curl --http2-prior-knowledge --silent --parallel http://localhost:#{PORT}/ --output /dev/null http://localhost:#{PORT}/ --output /dev/null"
   end
 
   it 'should run' do
-    system(client)
+    system(h2spec)
+    system(curl)
   end
 end
