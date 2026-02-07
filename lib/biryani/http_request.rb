@@ -16,7 +16,7 @@ module Biryani
     # @return [Array<String>, nil]
     def trailers
       # https://datatracker.ietf.org/doc/html/rfc9110#section-6.6.2-4
-      keys = (@fields['trailer'] || []).map { |x| x.split(',').map(&:strip) }.flatten
+      keys = (@fields['trailer'] || []).flat_map { |x| x.split(',').map(&:strip) }
       @fields.slice(*keys)
     end
   end
