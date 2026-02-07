@@ -4,7 +4,7 @@ module Biryani
 
     # @param method [String]
     # @param uri [URI]
-    # @param fields [Hash<String, String>]
+    # @param fields [Hash<String, Array<String>>]
     # @param content [String]
     def initialize(method, uri, fields, content)
       @method = method
@@ -46,9 +46,11 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, '`TE` field has a value other than `trailers`') if name == 'te' && value != 'trailers'
 
       if name == 'cookie' && @h.key?('cookie')
-        @h[name] << "; #{value}"
+        @h[name][0] << "; #{value}"
+      elsif @h.key?(name)
+        @h[name] << value
       else
-        @h[name] = value
+        @h[name] = [value]
       end
 
       nil
@@ -77,7 +79,7 @@ module Biryani
       self.class.http_request(h, s)
     end
 
-    # @param fields [Hash<String, String>]
+    # @param fields [Hash<String, Array<String>>]
     # @param s [String]
     #
     # @return [HTTPRequest, ConnectionError]
@@ -85,8 +87,8 @@ module Biryani
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| fields.key?(x) }
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if fields.key?('content-length') && !s.empty? && s.length != fields['content-length'].to_i
 
-      uri = URI("#{fields[':scheme']}://#{fields[':authority']}#{fields[':path']}")
-      HTTPRequest.new(fields[':method'], uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) }, s)
+      uri = URI("#{fields[':scheme'][0]}://#{fields[':authority'][0]}#{fields[':path'][0]}")
+      HTTPRequest.new(fields[':method'][0], uri, fields.reject { |name, _| PSEUDO_HEADER_FIELDS.include?(name) }, s)
     end
   end
 end

@@ -39,7 +39,7 @@ RSpec.describe HTTPRequestBuilder do
       builder.build('')
     end
     it 'should field' do
-      expect(request.fields['cookie']).to eq 'a=1; b=2; c=3; d=4'
+      expect(request.fields['cookie']).to eq ['a=1; b=2; c=3; d=4']
     end
   end
 end
