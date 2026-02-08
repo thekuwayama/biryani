@@ -145,8 +145,7 @@ module Biryani
       # @return [Integer]
       def self.decode_indexed(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 7, cursor)
-        raise Error::HPACKDecodeError if index.zero?
-        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
+        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
         field = if index <= STATIC_TABLE_SIZE
                   STATIC_TABLE[index - 1]
@@ -203,8 +202,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_incremental_indexing(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 6, cursor)
-        raise Error::HPACKDecodeError if index.zero?
-        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
+        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
         name = if index <= STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
@@ -283,8 +281,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_never_indexed(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 4, cursor)
-        raise Error::HPACKDecodeError if index.zero?
-        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
+        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
         name = if index <= STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
@@ -339,8 +336,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_without_indexing(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 4, cursor)
-        raise Error::HPACKDecodeError if index.zero?
-        raise Error::HPACKDecodeError if index > STATIC_TABLE_SIZE + dynamic_table.count_entries
+        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
         name = if index <= STATIC_TABLE_SIZE
                  STATIC_TABLE[index - 1][0]
