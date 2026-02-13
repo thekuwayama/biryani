@@ -255,7 +255,7 @@ module Biryani
 
     # @return [Boolean]
     def receiving_continuation?
-      %i[receiving_continuation receiving_continuation_and_data].include?(@state)
+      %i[receiving_continuation receiving_continuation_and_data receiving_trailer_continuation].include?(@state)
     end
   end
 end
