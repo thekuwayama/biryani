@@ -9,7 +9,7 @@ module Biryani
       # @return [String]
       def self.encode(name, value, dynamic_table)
         case find(name, value, dynamic_table)
-        in Some(index, v) if v.nil?
+        in Some(index, nil)
           res = encode_indexed(index)
         in Some(index, v)
           res = encode_literal_value(index, v)
