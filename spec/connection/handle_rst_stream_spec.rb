@@ -6,7 +6,7 @@ RSpec.describe Connection do
       Frame::RstStream.new(2, 0)
     end
     let(:ctx) do
-      StreamContext.new(2, 65_535, 65_535, do_nothing_proc)
+      StreamContext.new(2, 65_535, 65_535, do_nothing_proc, Ractor::Port.new)
     end
     it 'should handle' do
       Connection.handle_rst_stream(rst_stream, ctx)

@@ -1,8 +1,11 @@
 module Biryani
   class StreamsContext
+    attr_accessor :tx
+
     def initialize(proc)
       @h = {} # Hash<Integer, StreamContext>
       @proc = proc
+      @tx = Ractor::Port.new
     end
 
     # @param stream_id [Integer]
@@ -11,7 +14,7 @@ module Biryani
     #
     # @return [StreamContext]
     def new_context(stream_id, send_initial_window_size, recv_initial_window_size)
-      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, @proc)
+      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, @proc, @tx)
       @h[stream_id] = ctx
       ctx
     end
@@ -33,13 +36,13 @@ module Biryani
       @h.length
     end
 
-    def each(&block)
-      @h.each_value(&block)
+    # @return [Boolean]
+    def empty?
+      @h.empty?
     end
 
-    # @return [Array<Port>]
-    def txs
-      @h.values.filter { |ctx| !ctx.closed? }.map(&:tx)
+    def each(&block)
+      @h.each_value(&block)
     end
 
     # @return [Integer]
@@ -88,28 +91,25 @@ module Biryani
     def remove_closed(data_buffer)
       closed_ids = closed_stream_ids.filter { |id| !data_buffer.has?(id) }
       closed_ids.each do |id|
-        @h[id].tx.close
+        @h.delete(id)
       end
     end
 
     def close_all
-      each do |ctx|
-        ctx.tx.close
-        ctx.close
-      end
+      each(&:close)
     end
   end
 
   class StreamContext
-    attr_accessor :tx, :send_window, :recv_window, :fragment, :content
+    attr_accessor :send_window, :recv_window, :fragment, :content
 
     # @param stream_id [Integer]
     # @param send_initial_window_size [Integer]
     # @param recv_initial_window_size [Integer]
     # @param proc [Proc]
-    def initialize(stream_id, send_initial_window_size, recv_initial_window_size, proc)
-      @tx = Ractor::Port.new
-      @stream = Stream.new(@tx, stream_id, proc)
+    # @param tx [Ractor::Port]
+    def initialize(stream_id, send_initial_window_size, recv_initial_window_size, proc, tx)
+      @stream = Stream.new(tx, stream_id, proc)
       @send_window = Window.new(send_initial_window_size)
       @recv_window = Window.new(recv_initial_window_size)
       @fragment = ''.b
