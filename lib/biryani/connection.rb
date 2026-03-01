@@ -46,7 +46,7 @@ module Biryani
       send_loop(io)
     rescue StandardError => e
       puts e.backtrace
-      self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
+      self.class.do_send(io, Frame::Goaway.new(@streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
     ensure
       io.close_write
     end
@@ -80,7 +80,7 @@ module Biryani
             self.class.do_send(io, reply_frame, true)
             close if self.class.transition_stream_state_send(reply_frame, @streams_ctx)
           elsif obj.length > @settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
-            self.class.do_send(io, Frame::Goaway.new(0, @streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
+            self.class.do_send(io, Frame::Goaway.new(@streams_ctx.last_stream_id, ErrorCode::FRAME_SIZE_ERROR, 'payload length greater than SETTINGS_MAX_FRAME_SIZE'), true)
             close
           else
             recv_dispatch(obj).each do |frame|
