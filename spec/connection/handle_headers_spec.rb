@@ -6,7 +6,7 @@ RSpec.describe Connection do
       Frame::Headers.new(true, false, 2, nil, nil, 'this is dummy', nil)
     end
     let(:ctx) do
-      StreamContext.new(2, 65_535, 65_535, do_nothing_proc)
+      StreamContext.new(2, 65_535, 65_535, do_nothing_proc, Ractor::Port.new)
     end
     let(:decoder) do
       HPACK::Decoder.new(4_096)

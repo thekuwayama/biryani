@@ -22,8 +22,8 @@ RSpec.describe Connection do
       streams_ctx[1].state_transition!(headers, :recv)
       streams_ctx[2].state_transition!(headers, :recv)
       streams_ctx.close_all
-      expect { streams_ctx[1].tx << nil }.to raise_error Ractor::ClosedError
-      expect { streams_ctx[2].tx << nil }.to raise_error Ractor::ClosedError
+      expect(streams_ctx[1].closed?).to eq true
+      expect(streams_ctx[2].closed?).to eq true
     end
 
     let(:rst_stream) do
@@ -32,8 +32,8 @@ RSpec.describe Connection do
     it 'should transition' do
       streams_ctx[2].state_transition!(headers, :recv)
       Connection.transition_stream_state_send(rst_stream, streams_ctx)
-      expect { streams_ctx[1].tx << nil }.to_not raise_error
-      expect { streams_ctx[2].tx << nil }.to_not raise_error
+      expect(streams_ctx[1].closed?).to eq false
+      expect(streams_ctx[2].closed?).to eq true
     end
   end
 end

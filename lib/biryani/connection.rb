@@ -71,10 +71,9 @@ module Biryani
     # rubocop: disable Metrics/PerceivedComplexity
     def send_loop(io)
       loop do
-        ports = @streams_ctx.txs
-        break if ports.empty? && @sock.closed?
+        break if @sock.closed? && @streams_ctx.empty?
 
-        port, obj = Ractor.select(@sock, *ports)
+        port, obj = Ractor.select(@sock, @streams_ctx.tx)
         if port == @sock
           if Biryani.err?(obj)
             reply_frame = Biryani.unwrap(obj, @streams_ctx.last_stream_id)
@@ -104,7 +103,6 @@ module Biryani
           self.class.send_data(io, stream_id, data, @send_window, max_frame_size, @streams_ctx, @data_buffer) unless data.empty?
         end
 
-        @streams_ctx.remove_closed(@data_buffer)
         break if closed?
       end
     end
@@ -182,7 +180,7 @@ module Biryani
       max_streams = @peer_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]
       send_initial_window_size = @peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       recv_initial_window_size = @settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
-      obj = self.class.transition_stream_state_recv(frame, @streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
+      obj = self.class.transition_stream_state_recv(frame, @streams_ctx, @data_buffer, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
       return [obj] if Biryani.err?(obj)
 
       ctx = obj
@@ -237,6 +235,7 @@ module Biryani
     # @param recv_frame [Object]
     # @param streams_ctx [StreamsContext]
     # @param stream_id [Integer]
+    # @param data_buffer [DataBuffer]
     # @param max_streams [Integer]
     # @param send_initial_window_size [Integer]
     # @param recv_initial_window_size [Integer]
@@ -244,13 +243,18 @@ module Biryani
     # @return [StreamContext, StreamError, ConnectionError]
     # rubocop: disable Metrics/CyclomaticComplexity
     # rubocop: disable Metrics/PerceivedComplexity
-    def self.transition_stream_state_recv(recv_frame, streams_ctx, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
+    def self.transition_stream_state_recv(recv_frame, streams_ctx, data_buffer, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
       ctx = streams_ctx[stream_id]
       return StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, 'exceed max concurrent streams') if ctx.nil? && streams_ctx.count_active + 1 > max_streams
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'even-numbered stream identifier') if ctx.nil? && stream_id.even?
       return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'new stream identifier is less than the existing stream identifiers') if ctx.nil? && streams_ctx.last_stream_id > stream_id
 
-      ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size) if ctx.nil?
+      if ctx.nil?
+        ctx = streams_ctx.new_context(stream_id, send_initial_window_size, recv_initial_window_size)
+        # An ideal implementation would wait the RTT before removing the stream.
+        streams_ctx.remove_closed(data_buffer)
+      end
+
       obj = ctx.state_transition!(recv_frame, :recv)
       return obj if Biryani.err?(obj)
 
