@@ -6,9 +6,9 @@ module Biryani
       # @param last_stream_id [Integer]
       # @param error_code [Integer]
       # @param debug [String]
-      def initialize(stream_id, last_stream_id, error_code, debug)
+      def initialize(last_stream_id, error_code, debug)
         @f_type = FrameType::GOAWAY
-        @stream_id = stream_id
+        @stream_id = 0
         @last_stream_id = last_stream_id
         @error_code = error_code
         @debug = debug
@@ -33,11 +33,13 @@ module Biryani
       #
       # @return [Goaway]
       def self.read(s, _flags, stream_id)
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') unless stream_id.zero?
+
         io = IO::Buffer.for(s)
         last_stream_id, error_code = io.get_values(%i[U32 U32], 0)
         debug = io.get_string(8)
 
-        Goaway.new(stream_id, last_stream_id, error_code, debug)
+        Goaway.new(last_stream_id, error_code, debug)
       end
     end
   end
