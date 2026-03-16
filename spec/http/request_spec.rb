@@ -1,13 +1,13 @@
-require_relative 'spec_helper'
+require_relative '../spec_helper'
 
-RSpec.describe HTTPRequest do
+RSpec.describe HTTP::Request do
   context 'trailers' do
     it 'should be empty' do
-      expect(HTTPRequest.new('get', 'http://localhost:8888/', {}, '').trailers.empty?).to eq true
+      expect(HTTP::Request.new('get', 'http://localhost:8888/', {}, '').trailers.empty?).to eq true
     end
 
     let(:req) do
-      HTTPRequest.new('get', 'http://localhost:8888/', { 'trailer' => %w[a b], 'a' => ['1'], 'b' => ['2'], 'c' => ['3'] }, '')
+      HTTP::Request.new('get', 'http://localhost:8888/', { 'trailer' => %w[a b], 'a' => ['1'], 'b' => ['2'], 'c' => ['3'] }, '')
     end
     it 'should return' do
       expect(req.trailers['a']).to eq ['1']
@@ -17,10 +17,10 @@ RSpec.describe HTTPRequest do
   end
 end
 
-RSpec.describe HTTPRequestBuilder do
+RSpec.describe HTTP::RequestBuilder do
   context 'field' do
     let(:builder) do
-      HTTPRequestBuilder.new
+      HTTP::RequestBuilder.new
     end
     it 'should field' do
       expect(builder.field('key', 'value')).to eq nil
@@ -35,19 +35,19 @@ RSpec.describe HTTPRequestBuilder do
     end
   end
 
-  context 'http_request' do
+  context 'build' do
     it 'should build' do
-      expect(HTTPRequestBuilder.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of HTTPRequest
+      expect(HTTP::RequestBuilder.build({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of HTTP::Request
     end
     it 'should not build' do
-      expect(HTTPRequestBuilder.http_request({ ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of ConnectionError
-      expect(HTTPRequestBuilder.http_request({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888', 'content-length' => '0' }, '1')).to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888', 'content-length' => '0' }, '1')).to be_kind_of ConnectionError
     end
   end
 
   context 'cookie' do
     let(:request) do
-      builder = HTTPRequestBuilder.new
+      builder = HTTP::RequestBuilder.new
       builder.fields({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' })
       builder.field('cookie', 'a=1')
       builder.field('cookie', 'b=2')

@@ -466,7 +466,7 @@ module Biryani
       return obj if Biryani.err?(obj)
 
       fields = obj
-      builder = HTTPRequestBuilder.new
+      builder = HTTP::RequestBuilder.new
       err = builder.fields(fields)
       return err unless err.nil?
 
@@ -479,7 +479,7 @@ module Biryani
     # @return [String] fragment
     # @return [String] data
     def self.http_response(res, encoder)
-      HTTPResponseParser.new(res).parse(encoder)
+      HTTP::ResponseParser.new(res).parse(encoder)
     end
 
     # @return [Hash<Integer, Integer>]
