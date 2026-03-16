@@ -117,7 +117,7 @@ module Biryani
       @state = State.new
     end
 
-    # @param req [HTTPRequest]
+    # @param req [HTTP::Request]
     def <<(req)
       @stream.rx.send(req, move: true)
     end

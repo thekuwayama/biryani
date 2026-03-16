@@ -19,7 +19,7 @@ module Biryani
 
     # proc [Proc]
     def initialize(proc)
-      @sock = nil # Ractor
+      @sock = nil # Ractor::Port
       @proc = proc
       @streams_ctx = StreamsContext.new(proc)
       @encoder = HPACK::Encoder.new(4_096)
@@ -225,7 +225,7 @@ module Biryani
     # rubocop: enable Metrics/MethodLength
 
     # @param io [IO]
-    # @param res [HTTPResponse]
+    # @param res [HTTP::Response]
     # @param stream_id [Integer]
     def handle_response(io, res, stream_id)
       fragment, data = self.class.http_response(res, @encoder)
@@ -460,7 +460,7 @@ module Biryani
     # @param content [String]
     # @param decoder [Decoder]
     #
-    # @return [HTTPRequest, ConnectionError]
+    # @return [HTTP::Request, ConnectionError]
     def self.http_request(fragment, content, decoder)
       obj = decoder.decode(fragment)
       return obj if Biryani.err?(obj)
@@ -473,7 +473,7 @@ module Biryani
       builder.build(content)
     end
 
-    # @param res [HTTPResponse]
+    # @param res [HTTP::Response]
     # @param encoder [Encoder]
     #
     # @return [String] fragment
