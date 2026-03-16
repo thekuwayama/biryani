@@ -8,14 +8,14 @@ module Biryani
     def initialize(tx, stream_id, proc)
       @rx = Ractor.new(tx, stream_id, proc) do |tx, stream_id, proc|
         unless (req = Ractor.recv).nil?
-          res = HTTPResponse.default
+          res = HTTP::Response.default
 
           begin
             proc.call(req, res)
             res.validate
           rescue StandardError => e
             puts e.backtrace
-            res = HTTPResponse.internal_server_error
+            res = HTTP::Response.internal_server_error
           end
 
           tx.send([res, stream_id], move: true)
