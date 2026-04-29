@@ -48,7 +48,8 @@ RSpec.describe HTTP::RequestBuilder do
     end
     it 'should not build' do
       expect(HTTP::RequestBuilder.build({ ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'] }, '')).to be_kind_of ConnectionError
-      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'content-length' => ['0'] }, '1')).to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'content-length' => ['0'] }, '1'))
+        .to be_kind_of ConnectionError
     end
   end
 
