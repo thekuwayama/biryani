@@ -82,15 +82,15 @@ module Biryani
       # @return [Request, ConnectionError]
       def self.build(h, s)
         return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| h.key?(x) }
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if h.key?('content-length') && !s.empty? && s.length != h['content-length'].to_i
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if h.key?('content-length') && !s.empty? && s.length != h['content-length'][0].to_i
 
         scheme = h[':scheme'][0]
         domain = h[':authority'][0]
         path = h[':path'][0]
         uri = URI("#{scheme}://#{domain}#{path}")
-        method = h[':method'][0]
+        method = h[':method'][0].upcase
         h['cookie'] = [h['cookie'].join('; ')] if h.key?('cookie')
-        Request.new(method, uri, h, s)
+        Request.new(method, uri, h.except(*PSEUDO_HEADER_FIELDS), s)
       end
     end
   end

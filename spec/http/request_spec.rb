@@ -7,7 +7,7 @@ RSpec.describe HTTP::Request do
     end
 
     let(:req) do
-      HTTP::Request.new('get', 'http://localhost:8888/', { 'trailer' => %w[a b], 'a' => ['1'], 'b' => ['2'], 'c' => ['3'] }, '')
+      HTTP::Request.new('GET', 'http://localhost:8888/', { 'trailer' => %w[a b], 'a' => ['1'], 'b' => ['2'], 'c' => ['3'] }, '')
     end
     it 'should return' do
       expect(req.trailers['a']).to eq ['1']
@@ -36,19 +36,27 @@ RSpec.describe HTTP::RequestBuilder do
   end
 
   context 'build' do
+    let(:request) do
+      HTTP::RequestBuilder.build({ ':method' => ['get'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'key' => ['value'] }, '')
+    end
     it 'should build' do
-      expect(HTTP::RequestBuilder.build({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of HTTP::Request
+      expect(request).to be_kind_of HTTP::Request
+      expect(request.method).to eq 'GET'
+      expect(request.uri).to eq URI('http://localhost:8888/')
+      expect(request.fields).to eq({ 'key' => ['value'] })
+      expect(request.content).to eq ''
     end
     it 'should not build' do
-      expect(HTTP::RequestBuilder.build({ ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' }, '')).to be_kind_of ConnectionError
-      expect(HTTP::RequestBuilder.build({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888', 'content-length' => '0' }, '1')).to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'] }, '')).to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'content-length' => ['0'] }, '1'))
+        .to be_kind_of ConnectionError
     end
   end
 
   context 'cookie' do
     let(:request) do
       builder = HTTP::RequestBuilder.new
-      builder.fields({ ':method' => 'GET', ':scheme' => 'http', ':path' => '/', ':authority' => 'localhost:8888' })
+      builder.fields([[':method', 'get'], [':scheme', 'http'], [':path', '/'], [':authority', 'localhost:8888']])
       builder.field('cookie', 'a=1')
       builder.field('cookie', 'b=2')
       builder.field('cookie', 'c=3')
