@@ -531,16 +531,8 @@ module Biryani
       #
       # @return [String]
       def self.encode(s)
-        bits = s.bytes.map { |sym| ENCODE_TABLE[sym] }
-
-        acc = IO::Buffer.new(bits.sum(&:bytesize))
-        offset = 0
-        bits.each do |s|
-          acc.set_string(s, offset)
-          offset += s.bytesize
-        end
-
-        [acc.get_string.ljust((acc.size + 7) & ~7, '1')].pack('B*')
+        bits = s.bytes.map { |sym| ENCODE_TABLE[sym] }.join
+        [bits.ljust((bits.bytesize + 7) & ~7, '1')].pack('B*')
       end
 
       # @param io [IO::Buffer]
