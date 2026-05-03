@@ -56,7 +56,7 @@ module Biryani
         i = 0
         loop do
           byte = io.get_value(:U8, c + i)
-          res += (byte & 127) * 2**(i * 7)
+          res += (byte & 127) << (i * 7)
 
           break if (byte & 128).zero?
 
