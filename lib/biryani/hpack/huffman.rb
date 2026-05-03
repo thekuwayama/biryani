@@ -546,7 +546,7 @@ module Biryani
         res = ''.b
         bits = 0
         bits_len = 0
-        bytes = io.get_values([:U8] * length, cursor)
+        bytes = io.get_string(cursor, length).bytes
         (length * 8).times do |i|
           bits_len += 1
           bits += 1 if (bytes[i / 8] & (1 << 7 - (i % 8))).positive?
