@@ -32,7 +32,7 @@ module Biryani
 
         bytes = [limit | mask]
         i -= limit
-        while i > 128
+        while i >= 128
           bytes << i % 128 + 128
           i /= 128
         end
