@@ -118,7 +118,7 @@ module Biryani
     # @return [Array<Object>, Array<ConnectionError>, Array<StreamError>] frames or errors
     def do_recv_dispatch(frame)
       receiving_continuation_stream_id = @streams_ctx.receiving_continuation_stream_id
-      return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
+      return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', frame.f_type)} for stream identifier #{format('0x%02x', frame.stream_id)}")] \
         if !receiving_continuation_stream_id.nil? && frame.stream_id != receiving_continuation_stream_id
 
       if frame.stream_id.zero?
@@ -135,7 +135,7 @@ module Biryani
     def handle_connection_frame(frame)
       case frame.f_type
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
-        [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier 0x00")]
+        [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', frame.f_type)} for stream identifier 0x00")]
       when FrameType::SETTINGS
         obj = self.class.handle_settings(frame, @peer_settings, @decoder, @streams_ctx)
         return [] if obj.nil?
