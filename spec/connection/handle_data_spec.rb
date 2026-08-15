@@ -10,7 +10,7 @@ RSpec.describe Connection do
       Window.new(65_535)
     end
     let(:streams_ctx1) do
-      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
       streams_ctx.new_context(1, 65_535, 65_535)
       streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
@@ -26,7 +26,7 @@ RSpec.describe Connection do
       recv_window
     end
     let(:streams_ctx2) do
-      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
       streams_ctx.new_context(1, 65_535, 65_535)
       streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx[2].recv_window.consume!(65_535 / 2)
@@ -46,7 +46,7 @@ RSpec.describe Connection do
       recv_window
     end
     let(:streams_ctx3) do
-      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
       streams_ctx.new_context(1, 65_535, 65_535)
       streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx

@@ -21,9 +21,10 @@ module Biryani
 
     # proc [Proc]
     def initialize(proc)
-      @sock = nil # Ractor::Port
+      @port = Ractor::Port.new
+      @recv_done = false
       @proc = proc
-      @streams_ctx = StreamsContext.new(proc)
+      @streams_ctx = StreamsContext.new(proc, @port)
       @encoder = HPACK::Encoder.new(DEFAULT_HEADER_TABLE_SIZE)
       @decoder = HPACK::Decoder.new(DEFAULT_HEADER_TABLE_SIZE)
       @send_window = Window.new(INITIAL_CONNECTION_WINDOW_SIZE)
@@ -55,12 +56,15 @@ module Biryani
 
     # @param io [IO]
     def recv_loop(io)
-      Ractor.new(io, @sock = Ractor::Port.new) do |io_, sock_|
+      Ractor.new(io, @port) do |io_, port_|
         loop do
           obj = Frame.read(io_)
-          break if obj.nil?
+          if obj.nil?
+            port_.send(:eof, move: true)
+            break
+          end
 
-          sock_.send(obj, move: true)
+          port_.send([:frame, obj], move: true)
         end
       end
     end
@@ -68,13 +72,14 @@ module Biryani
     # @param io [IO]
     def select_loop(io)
       loop do
-        break if @sock.closed? && @streams_ctx.empty?
+        break if @recv_done && @streams_ctx.empty?
 
-        port, obj = Ractor.select(@sock, @streams_ctx.tx)
-        if port == @sock
+        case @port.receive
+        in :eof
+          @recv_done = true
+        in [:frame, obj]
           recv_dispatch(io, obj)
-        else
-          res, stream_id = obj
+        in [:response, res, stream_id]
           handle_response(io, res, stream_id)
         end
 

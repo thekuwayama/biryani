@@ -9,7 +9,7 @@ RSpec.describe Connection do
       HPACK::Decoder.new(4_096)
     end
     let(:streams_ctx) do
-      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
       streams_ctx.new_context(1, 65_535, 65_535)
       streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx

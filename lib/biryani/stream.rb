@@ -18,7 +18,7 @@ module Biryani
             res = HTTP::Response.internal_server_error
           end
 
-          tx.send([res, stream_id], move: true)
+          tx.send([:response, res, stream_id], move: true)
         end
       end
     end

@@ -2,10 +2,10 @@ module Biryani
   class StreamsContext
     attr_accessor :tx
 
-    def initialize(proc)
+    def initialize(proc, tx)
       @h = {} # Hash<Integer, StreamContext>
       @proc = proc
-      @tx = Ractor::Port.new
+      @tx = tx
     end
 
     # @param stream_id [Integer]
