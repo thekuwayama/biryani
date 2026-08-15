@@ -64,7 +64,6 @@ module Biryani
       # @return [Headers]
       # rubocop: disable Metrics/AbcSize
       # rubocop: disable Metrics/CyclomaticComplexity
-      # rubocop: disable Metrics/MethodLength
       # rubocop: disable Metrics/PerceivedComplexity
       def self.read(s, flags, stream_id)
         priority = Frame.read_priority(flags)
@@ -74,14 +73,12 @@ module Biryani
 
         if priority && padded
           io = IO::Buffer.for(s)
-          pad_length, stream_dependency, weight = io.get_values(%i[U8 U32 U8], 0)
-          fragment_length = s.bytesize - pad_length - 6
+          _pad_length, stream_dependency, weight = io.get_values(%i[U8 U32 U8], 0)
           # exclusive = (stream_dependency / 2**31).positive?
           stream_dependency %= 2**31
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'cannot depend on itself') if stream_dependency == stream_id
 
-          fragment = io.get_string(6, fragment_length)
-          padding = io.get_string(6 + fragment_length)
+          fragment, padding, pad_length = Frame.read_padded_payload(io, s, 6)
           return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if padding.bytesize != pad_length
         elsif priority
           io = IO::Buffer.for(s)
@@ -94,10 +91,7 @@ module Biryani
           return ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame') if fragment.bytesize + 5 != s.bytesize
         elsif padded
           io = IO::Buffer.for(s)
-          pad_length = io.get_value(:U8, 0)
-          fragment_length = s.bytesize - pad_length - 1
-          fragment = io.get_string(1, fragment_length)
-          padding = io.get_string(1 + fragment_length)
+          fragment, padding, pad_length = Frame.read_padded_payload(io, s, 1)
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= s.bytesize
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
@@ -108,7 +102,6 @@ module Biryani
       end
       # rubocop: enable Metrics/AbcSize
       # rubocop: enable Metrics/CyclomaticComplexity
-      # rubocop: enable Metrics/MethodLength
       # rubocop: enable Metrics/PerceivedComplexity
     end
   end

@@ -53,11 +53,9 @@ module Biryani
 
         io = IO::Buffer.for(s)
         if padded
-          pad_length, promised_stream_id = io.get_values(%i[U8 U32], 0)
+          _pad_length, promised_stream_id = io.get_values(%i[U8 U32], 0)
           promised_stream_id %= 2**31 # Promised Stream ID (31)
-          fragment_length = s.bytesize - pad_length - 5
-          fragment = io.get_string(5, fragment_length)
-          padding = io.get_string(5 + fragment_length)
+          fragment, padding, pad_length = Frame.read_padded_payload(io, s, 5)
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if pad_length >= s.bytesize
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
