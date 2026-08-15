@@ -3,7 +3,7 @@ require_relative '../spec_helper'
 RSpec.describe Connection do
   context 'transition_stream_state_send' do
     let(:streams_ctx) do
-      streams_ctx = StreamsContext.new(do_nothing_proc)
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
       streams_ctx.new_context(1, 65_535, 65_535)
       streams_ctx.new_context(2, 65_535, 65_535)
       streams_ctx
