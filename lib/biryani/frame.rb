@@ -98,6 +98,22 @@ module Biryani
     def self.to_binary_s_header(payload_length, f_type, flags, stream_id)
       [payload_length, f_type, flags, stream_id].pack('NCCN')[1..]
     end
+
+    # @param io [IO::Buffer]
+    # @param s [String]
+    # @param header_length [Integer] bytes preceding the payload, including the 1-byte Pad Length field
+    #
+    # @return [String] payload
+    # @return [String] padding
+    # @return [Integer] pad_length
+    def self.read_padded_payload(io, s, header_length)
+      pad_length = io.get_value(:U8, 0)
+      payload_length = s.bytesize - pad_length - header_length
+      payload = io.get_string(header_length, payload_length)
+      padding = io.get_string(header_length + payload_length)
+
+      [payload, padding, pad_length]
+    end
   end
 end
 

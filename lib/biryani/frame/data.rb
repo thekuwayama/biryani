@@ -51,10 +51,7 @@ module Biryani
 
         if padded
           io = IO::Buffer.for(s)
-          pad_length = io.get_value(:U8, 0)
-          data_length = s.bytesize - pad_length - 1
-          data = io.get_string(1, data_length)
-          padding = io.get_string(1 + data_length)
+          data, padding, pad_length = Frame.read_padded_payload(io, s, 1)
           return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if padding.bytesize != pad_length
         else
           data = s
