@@ -20,14 +20,14 @@ module Biryani
       datas = []
       @buffer.each do |stream_id, data|
         frames, remains = streams_ctx.sendable_datas(stream_id, data, send_window, max_frame_size)
-        datas += frames
+        datas.concat(frames)
         if remains.empty?
           @buffer.delete(stream_id)
         else
           @buffer[stream_id] = remains
         end
 
-        len = frames.map(&:length).sum
+        len = frames.sum(&:length)
         send_window.consume!(len)
         streams_ctx[stream_id].send_window.consume!(len)
       end
