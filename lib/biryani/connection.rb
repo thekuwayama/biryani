@@ -12,8 +12,10 @@ module Biryani
   class Connection
     CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".freeze
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
+    DEFAULT_HEADER_TABLE_SIZE = 4_096
+    INITIAL_CONNECTION_WINDOW_SIZE = 65_535
 
-    private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH
+    private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH, :DEFAULT_HEADER_TABLE_SIZE, :INITIAL_CONNECTION_WINDOW_SIZE
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
@@ -22,10 +24,10 @@ module Biryani
       @sock = nil # Ractor::Port
       @proc = proc
       @streams_ctx = StreamsContext.new(proc)
-      @encoder = HPACK::Encoder.new(4_096)
-      @decoder = HPACK::Decoder.new(4_096)
-      @send_window = Window.new(65_535)
-      @recv_window = Window.new(65_535)
+      @encoder = HPACK::Encoder.new(DEFAULT_HEADER_TABLE_SIZE)
+      @decoder = HPACK::Decoder.new(DEFAULT_HEADER_TABLE_SIZE)
+      @send_window = Window.new(INITIAL_CONNECTION_WINDOW_SIZE)
+      @recv_window = Window.new(INITIAL_CONNECTION_WINDOW_SIZE)
       @data_buffer = DataBuffer.new
       @settings = self.class.default_settings # Hash<Integer, Integer>
       @peer_settings = self.class.default_settings # Hash<Integer, Integer>
@@ -486,7 +488,7 @@ module Biryani
     def self.default_settings
       # https://datatracker.ietf.org/doc/html/rfc9113#section-6.5.2
       {
-        SettingsID::SETTINGS_HEADER_TABLE_SIZE => 4_096,
+        SettingsID::SETTINGS_HEADER_TABLE_SIZE => DEFAULT_HEADER_TABLE_SIZE,
         SettingsID::SETTINGS_ENABLE_PUSH => 1,
         SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS => 0xffffffff,
         SettingsID::SETTINGS_INITIAL_WINDOW_SIZE => 65_535,
