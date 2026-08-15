@@ -47,6 +47,26 @@ module Biryani
         @table[index]
       end
 
+      # @param index [Integer]
+      #
+      # @return [Array] [name, value]
+      def entry_at(index)
+        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + count_entries
+
+        if index <= STATIC_TABLE_SIZE
+          STATIC_TABLE[index - 1]
+        else
+          self[index - 1 - STATIC_TABLE_SIZE]
+        end
+      end
+
+      # @param index [Integer]
+      #
+      # @return [String]
+      def name_at(index)
+        entry_at(index)[0]
+      end
+
       # @param new_limit [Integer]
       def chomp!(new_limit)
         while @size > new_limit

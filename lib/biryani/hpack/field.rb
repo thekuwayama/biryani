@@ -145,15 +145,8 @@ module Biryani
       # @return [Integer]
       def self.decode_indexed(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 7, cursor)
-        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
 
-        field = if index <= STATIC_TABLE_SIZE
-                  STATIC_TABLE[index - 1]
-                else
-                  dynamic_table[index - 1 - STATIC_TABLE_SIZE]
-                end
-
-        [field, c]
+        [dynamic_table.entry_at(index), c]
       end
 
       #   0   1   2   3   4   5   6   7
@@ -202,13 +195,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_incremental_indexing(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 6, cursor)
-        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
-
-        name = if index <= STATIC_TABLE_SIZE
-                 STATIC_TABLE[index - 1][0]
-               else
-                 dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
-               end
+        name = dynamic_table.name_at(index)
         value, c = String.decode(io, c)
         dynamic_table.store(name, value)
 
@@ -281,13 +268,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_never_indexed(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 4, cursor)
-        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
-
-        name = if index <= STATIC_TABLE_SIZE
-                 STATIC_TABLE[index - 1][0]
-               else
-                 dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
-               end
+        name = dynamic_table.name_at(index)
         value, c = String.decode(io, c)
 
         [[name, value], c]
@@ -336,13 +317,7 @@ module Biryani
       # @return [Integer]
       def self.decode_literal_value_without_indexing(io, cursor, dynamic_table)
         index, c = Integer.decode(io, 4, cursor)
-        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + dynamic_table.count_entries
-
-        name = if index <= STATIC_TABLE_SIZE
-                 STATIC_TABLE[index - 1][0]
-               else
-                 dynamic_table[index - 1 - STATIC_TABLE_SIZE][0]
-               end
+        name = dynamic_table.name_at(index)
         value, c = String.decode(io, c)
 
         [[name, value], c]
