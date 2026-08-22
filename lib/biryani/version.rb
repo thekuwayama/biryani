@@ -1,3 +1,3 @@
 module Biryani
-  VERSION = '0.0.12'.freeze
+  VERSION = '0.0.14'.freeze
 end
