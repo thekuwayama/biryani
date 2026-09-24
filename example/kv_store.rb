@@ -9,17 +9,17 @@ require 'ractor/lockvar'
 require 'biryani'
 
 # `Ractor::LockVar` and `Ractor::KeyLockHash` (ko1/ractor-sharing) are shareable, so every stream Ractor uses NEXT_ID and STORE directly.
-# Each key of STORE is consistent on its own; `to_h` is not a snapshot of the whole map, and deleted keys keep their entries.
 #
-#   +-- stream Ractor (POST /) --------------+          +-- NEXT_ID ---------------------+
-#   |  NEXT_ID.increment --------------------+--------->|  Ractor::LockVar               |
-#   |  STORE[id] = value --------------------+-----+    +--------------------------------+
-#   +----------------------------------------+     |
-#                                                  |    +-- STORE -----------------------+
-#   +-- stream Ractor (PUT /:id) ------------+     +--->|  Ractor::KeyLockHash           |
-#   |  STORE.update(id) { ... } -------------+-----+    |  1 => "hoge"                   |
-#   +----------------------------------------+          |  2 => "piyo"                   |
-#                                                       +--------------------------------+
+#   +-- stream Ractor (POST /) --------------+         +-- NEXT_ID ---------------------+
+#   |  NEXT_ID.increment --------------------+-------->|  Ractor::LockVar               |
+#   |  STORE[id] = value --------------------+----+    +--------------------------------+
+#   +----------------------------------------+    |
+#                                                 |    +-- STORE -----------------------+
+#                                                 +--->|  Ractor::KeyLockHash           |
+#                                                 |    |  1 => "hoge"                   |
+#   +-- stream Ractor (PUT /:id) ------------+    |    |  2 => "piyo"                   |
+#   |  STORE.update(id) { ... } -------------+----+    |                                |
+#   +----------------------------------------+         +--------------------------------+
 NEXT_ID = Ractor::LockVar.new(0) # plays the role of AUTOINCREMENT in SQL
 STORE = Ractor::KeyLockHash.new
 
