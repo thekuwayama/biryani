@@ -48,16 +48,15 @@ module App
   end
 
   def self.do_list(res)
-    respond(res, 200, STORE.to_h.compact.keys.sort)
+    items = STORE.to_h.compact.sort.map { |id, value| { id: id, value: value } }
+    respond(res, 200, items)
   end
 
   def self.do_get(id, res)
     value = STORE[id]
     return respond(res, 404, { error: 'not found' }) if value.nil?
 
-    res.status = 200
-    res.fields['content-type'] = 'text/plain'
-    res.content = value
+    respond(res, 200, { id: id, value: value })
   end
 
   def self.do_put(id, value, res)
