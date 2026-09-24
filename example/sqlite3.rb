@@ -7,8 +7,27 @@ require 'socket'
 require 'sqlite3'
 require 'biryani'
 
-# sqlite3 is not Ractor-safe: its methods raise Ractor::UnsafeError outside the main Ractor.
-# So the main Ractor owns the database, and handlers send queries to it through DB_PORT.
+# `sqlite3` is not Ractor-safe, so the main Ractor owns the database, and handlers send queries to it through DB_PORT.
+#
+#   +-- main Ractor ---------------------+           +-- stream Ractor (1 Ractor / stream) ------------+
+#   |                                    |           |                                                 |
+#   |  +-- DB -----------------------+   |           |  +-- handler -------------------------------+   |
+#   |  | SQLite3::Database           |   |           |  | App.call(req, res)                       |   |
+#   |  +-----------------------------+   |           |  |   DB.execute(sql, *binds)                |   |
+#   |      ^                             |           |  |     |                                    |   |
+#   |      | sql                         |           |  |     | sql                                |   |
+#   |      |                             |           |  |     v                                    |   |
+#   |    DB_PORT.receive <---------------+-----------+--+---- DB_PORT.send                         |   |
+#   |    reply.send ---------------------+-----------+--+---> reply.receive                        |   |
+#   |                                    |           |  +------------------------------------------+   |
+#   |  Ractor.new(server, socket)        |           |                                                 |
+#   +----+-------------------------------+           +-------------------------------------------------+
+#        |                                                                                          ^
+#        v                                                                                          |
+#   +-- server Ractor ----------------------+       +-- connection Ractor (1 Ractor / connection) --+--+
+#   |  server.run(socket)                   |       |  Stream.new(tx, stream_id, proc)              |  |
+#   |    Ractor.new(socket.accept, @proc) --+------>|    Ractor.new(tx, stream_id, proc) -----------+  |
+#   +---------------------------------------+       +--------------------------------------------------+
 DB_PORT = Ractor::Port.new
 
 module DB
@@ -62,7 +81,7 @@ module App
     when 'DELETE'
       do_delete(req, res)
     else
-      respond(res, 405, { error: 'method not allowed' })
+      respond(res, 405, { error: 'HTTP Method not allowed' })
     end
   end
 
