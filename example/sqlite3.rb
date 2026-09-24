@@ -36,6 +36,8 @@ module DB
   # @param sql [String]
   # @param binds [Array<Object>]
   #
+  # @raise [DB::Error] if the query fails on the main Ractor
+  #
   # @return [Array<Hash>] rows
   # @return [Integer] changes
   def self.execute(sql, *binds)
@@ -93,9 +95,16 @@ module App
     respond(res, 201, { status: 'created' })
   end
 
-  def self.do_get(_req, res)
-    users, = DB.execute('SELECT id, name FROM users ORDER BY id;')
-    respond(res, 200, users)
+  def self.do_get(req, res)
+    if req.uri.path == '/'
+      users, = DB.execute('SELECT id, name FROM users ORDER BY id;')
+      return respond(res, 200, users)
+    end
+
+    users, = DB.execute('SELECT id, name FROM users WHERE id = ?;', user_id(req))
+    return respond(res, 404, { error: 'not found' }) if users.empty?
+
+    respond(res, 200, users.first)
   end
 
   def self.do_put(req, res)
