@@ -162,7 +162,7 @@ server = Biryani::Server.new(
 Ractor.new(server, socket) { |s, sock| s.run(sock) }
 DB.serve(path)
 
-# $ bundle exec ruby example/sqlite3.rb
+# $ bundle exec ruby sqlite3.rb
 # $ curl -v --http2-prior-knowledge http://localhost:8888 -X POST -H "Content-Type: application/json" -d '{"name":"Alice","age":18}'
 # $ curl -v --http2-prior-knowledge http://localhost:8888/
 # $ curl -v --http2-prior-knowledge http://localhost:8888/1 -X PUT -H "Content-Type: application/json" -d '{"name":"Bob","age":20}'

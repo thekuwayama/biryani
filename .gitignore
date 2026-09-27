@@ -16,3 +16,5 @@
 /tmp/
 .DS_Store
 Gemfile.lock
+/example/server.crt
+/example/server.key

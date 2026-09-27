@@ -104,7 +104,7 @@ server = Biryani::Server.new(
 )
 server.run(socket)
 
-# $ bundle exec ruby example/kv_store.rb
+# $ bundle exec ruby kv_store.rb
 # $ curl -v --http2-prior-knowledge http://localhost:8888 -X POST -d 'hoge'
 # $ curl -v --http2-prior-knowledge http://localhost:8888/
 # $ curl -v --http2-prior-knowledge http://localhost:8888/1 -X PUT -d 'piyo'
