@@ -46,9 +46,23 @@ RSpec.describe HTTP::RequestBuilder do
       expect(request.fields).to eq({ 'key' => ['value'] })
       expect(request.content).to eq ''
     end
+
+    let(:request_with_host) do
+      HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], 'host' => ['localhost:8888'] }, '')
+    end
+    it 'should build with host' do
+      expect(request_with_host).to be_kind_of HTTP::Request
+      expect(request_with_host.uri).to eq URI('http://localhost:8888/')
+    end
+
     it 'should not build' do
       expect(HTTP::RequestBuilder.build({ ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'] }, '')).to be_kind_of ConnectionError
       expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'content-length' => ['4'] }, '123'))
+        .to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'] }, '')).to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'host' => ['example.com'] }, ''))
+        .to be_kind_of ConnectionError
+      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], 'host' => ['localhost:8888', 'localhost:8888'] }, ''))
         .to be_kind_of ConnectionError
     end
   end

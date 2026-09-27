@@ -25,6 +25,8 @@ module Biryani
     class RequestBuilder
       PSEUDO_HEADER_FIELDS = [':authority', ':method', ':path', ':scheme'].freeze
       Ractor.make_shareable(PSEUDO_HEADER_FIELDS)
+      REQUIRED_PSEUDO_HEADER_FIELDS = [':method', ':path', ':scheme'].freeze
+      Ractor.make_shareable(REQUIRED_PSEUDO_HEADER_FIELDS)
 
       def initialize
         @h = {}
@@ -80,18 +82,48 @@ module Biryani
       # @param s [String]
       #
       # @return [Request, ConnectionError]
+      # rubocop: disable Metrics/CyclomaticComplexity
       def self.build(h, s)
-        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless PSEUDO_HEADER_FIELDS.all? { |x| h.key?(x) }
+        # https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1-3
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing pseudo-header fields') unless REQUIRED_PSEUDO_HEADER_FIELDS.all? { |x| h.key?(x) }
         return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid content-length') if h.key?('content-length') && !s.empty? && s.length != h['content-length'][0].to_i
 
+        obj = authority(h)
+        return obj if Biryani.err?(obj)
+
+        authority = obj
         scheme = h[':scheme'][0]
-        domain = h[':authority'][0]
         path = h[':path'][0]
-        uri = URI("#{scheme}://#{domain}#{path}")
+        uri = URI("#{scheme}://#{authority}#{path}")
         method = h[':method'][0].upcase
         h['cookie'] = [h['cookie'].join('; ')] if h.key?('cookie')
         Request.new(method, uri, h.except(*PSEUDO_HEADER_FIELDS), s)
       end
+      # rubocop: enable Metrics/CyclomaticComplexity
+
+      # @param h [Hash<String, Array<String>>]
+      #
+      # @return [String, ConnectionError]
+      # rubocop: disable Metrics/CyclomaticComplexity
+      # rubocop: disable Metrics/PerceivedComplexity
+      def self.authority(h)
+        host = h['host']
+        # https://datatracker.ietf.org/doc/html/rfc9110#section-5.3-3
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'duplicated host fields') if !host.nil? && host.length > 1
+
+        authority = h[':authority']&.first
+        # https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1-2.3.3
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'mismatched :authority and host fields') if !authority.nil? && !host.nil? && authority.downcase != host[0].downcase
+
+        s = authority || host&.first
+        # https://datatracker.ietf.org/doc/html/rfc9110#section-4.2.1-4
+        # https://datatracker.ietf.org/doc/html/rfc9110#section-4.2.2-4
+        return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'missing :authority and host fields') if s.nil? || s.empty?
+
+        s
+      end
+      # rubocop: enable Metrics/CyclomaticComplexity
+      # rubocop: enable Metrics/PerceivedComplexity
     end
   end
 end
