@@ -365,8 +365,9 @@ module Biryani
     # @param streams_ctx [StreamsContext]
     # @param decoder [Decoder]
     #
-    # @return [Array<WindowUpdate>, ConnectionError]
+    # @return [Array<WindowUpdate>, ConnectionError, StreamError]
     # rubocop: disable Metrics/AbcSize
+    # rubocop: disable Metrics/CyclomaticComplexity
     def self.handle_data(stream_id, data, recv_window, streams_ctx, decoder)
       ctx = streams_ctx[stream_id]
       return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'DATA Frame length exceeds flow-control window size') \
@@ -374,7 +375,8 @@ module Biryani
 
       ctx.content << data
       if ctx.half_closed_remote?
-        obj = http_request(ctx.fragment, ctx.content, decoder)
+        obj = http_request(stream_id, ctx.fragment, ctx.content, decoder)
+        ctx << nil if obj.is_a?(StreamError) # terminate the Stream Ractor waiting for a request
         return obj if Biryani.err?(obj)
 
         ctx << obj
@@ -386,16 +388,18 @@ module Biryani
       window_updates
     end
     # rubocop: enable Metrics/AbcSize
+    # rubocop: enable Metrics/CyclomaticComplexity
 
     # @param headers [Headers]
     # @param ctx [StreamContext]
     # @param decoder [Decoder]
     #
-    # @return [nil, ConnectionError]
+    # @return [nil, ConnectionError, StreamError]
     def self.handle_headers(headers, ctx, decoder)
       ctx.fragment << headers.fragment
       if ctx.half_closed_remote?
-        obj = http_request(ctx.fragment, ctx.content, decoder)
+        obj = http_request(headers.stream_id, ctx.fragment, ctx.content, decoder)
+        ctx << nil if obj.is_a?(StreamError) # terminate the Stream Ractor waiting for a request
         return obj if Biryani.err?(obj)
 
         ctx << obj
@@ -463,21 +467,23 @@ module Biryani
       nil
     end
 
+    # @param stream_id [Integer]
     # @param fragment [String]
     # @param content [String]
     # @param decoder [Decoder]
     #
-    # @return [HTTP::Request, ConnectionError]
-    def self.http_request(fragment, content, decoder)
+    # @return [HTTP::Request, ConnectionError, StreamError]
+    def self.http_request(stream_id, fragment, content, decoder)
       obj = decoder.decode(fragment)
       return obj if Biryani.err?(obj)
 
       fields = obj
       builder = HTTP::RequestBuilder.new
-      err = builder.fields(fields)
-      return err unless err.nil?
-
+      builder.fields(fields)
       builder.build(content)
+    rescue HTTP::Error::MalformedRequestError => e
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-8.1.1-3
+      StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, e.message)
     end
 
     # @param res [HTTP::Response]

@@ -5,6 +5,8 @@ module Biryani
       class Error < StandardError; end
 
       class InvalidResponseError < Error; end
+
+      class MalformedRequestError < Error; end
     end
   end
 end
