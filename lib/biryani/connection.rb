@@ -148,7 +148,8 @@ module Biryani
         return [] if obj.nil?
 
         settings_ack = obj
-        [settings_ack]
+        max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
+        [settings_ack] + @data_buffer.take!(@send_window, @streams_ctx, max_frame_size)
       when FrameType::PING
         obj = self.class.handle_ping(frame)
         return [] if obj.nil?
