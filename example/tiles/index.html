@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>svg tiles</title>
+    <style>
+      #tiles {
+        display: grid;
+        grid-template-columns: repeat(15, 32px);
+      }
+      #tiles img {
+        display: block;
+        width: 32px;
+        height: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      <a href="?latency=0">0 ms</a> | <a href="?latency=100">100 ms</a> |
+      <a href="?latency=500">500 ms</a>
+    </p>
+    <p id="result">loading...</p>
+    <div id="tiles"></div>
+    <script>
+      const GRID = 15;
+      const latency =
+        new URLSearchParams(location.search).get("latency") || "0";
+      const tiles = document.getElementById("tiles");
+      for (let y = 0; y < GRID; y++) {
+        for (let x = 0; x < GRID; x++) {
+          const img = document.createElement("img");
+          img.src = `/tile/${x}/${y}.svg?latency=${latency}`;
+          tiles.appendChild(img);
+        }
+      }
+
+      window.addEventListener("load", () => {
+        const protocol =
+          performance.getEntriesByType("navigation")[0].nextHopProtocol;
+        const time = Math.round(performance.now());
+        document.getElementById("result").textContent =
+          `${protocol}, latency: ${latency} ms / tile, loaded in ${time} ms`;
+      });
+    </script>
+  </body>
+</html>
