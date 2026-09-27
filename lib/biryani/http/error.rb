@@ -4,7 +4,7 @@ module Biryani
       # Generic error, common for all classes under Biryani::HTTP::Error module.
       class Error < StandardError; end
 
-      class InvalidHTTPResponseError < Error; end
+      class InvalidResponseError < Error; end
     end
   end
 end
