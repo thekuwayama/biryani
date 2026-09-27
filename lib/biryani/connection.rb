@@ -185,7 +185,7 @@ module Biryani
       return [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', typ)} for stream identifier #{format('0x%02x', stream_id)}")] \
         if [FrameType::SETTINGS, FrameType::PING, FrameType::GOAWAY].include?(typ)
 
-      max_streams = @peer_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]
+      max_streams = @settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]
       send_initial_window_size = @peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       recv_initial_window_size = @settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       obj = self.class.transition_stream_state_recv(frame, @streams_ctx, @data_buffer, stream_id, max_streams, send_initial_window_size, recv_initial_window_size)
