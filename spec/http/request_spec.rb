@@ -23,15 +23,15 @@ RSpec.describe HTTP::RequestBuilder do
       HTTP::RequestBuilder.new
     end
     it 'should field' do
-      expect(builder.field('key', 'value')).to eq nil
+      expect { builder.field('key', 'value') }.not_to raise_error
     end
     it 'should not field' do
-      expect(builder.field('KEY', 'VALUE')).to be_kind_of ConnectionError
-      expect(builder.field(':key', 'value')).to be_kind_of ConnectionError
-      expect(builder.field(':path', '')).to be_kind_of ConnectionError
-      expect(builder.field('connection', 'keep-alive')).to be_kind_of ConnectionError
-      expect(builder.field(':authority', 'localhost:8888')).to eq nil
-      expect(builder.field(':authority', 'localhost:8888')).to be_kind_of ConnectionError
+      expect { builder.field('KEY', 'VALUE') }.to raise_error HTTP::Error::MalformedRequestError
+      expect { builder.field(':key', 'value') }.to raise_error HTTP::Error::MalformedRequestError
+      expect { builder.field(':path', '') }.to raise_error HTTP::Error::MalformedRequestError
+      expect { builder.field('connection', 'keep-alive') }.to raise_error HTTP::Error::MalformedRequestError
+      expect { builder.field(':authority', 'localhost:8888') }.not_to raise_error
+      expect { builder.field(':authority', 'localhost:8888') }.to raise_error HTTP::Error::MalformedRequestError
     end
   end
 
@@ -46,10 +46,24 @@ RSpec.describe HTTP::RequestBuilder do
       expect(request.fields).to eq({ 'key' => ['value'] })
       expect(request.content).to eq ''
     end
+
+    let(:request_with_host) do
+      HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], 'host' => ['localhost:8888'] }, '')
+    end
+    it 'should build with host' do
+      expect(request_with_host).to be_kind_of HTTP::Request
+      expect(request_with_host.uri).to eq URI('http://localhost:8888/')
+    end
+
     it 'should not build' do
-      expect(HTTP::RequestBuilder.build({ ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'] }, '')).to be_kind_of ConnectionError
-      expect(HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'content-length' => ['4'] }, '123'))
-        .to be_kind_of ConnectionError
+      expect { HTTP::RequestBuilder.build({ ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'] }, '') }.to raise_error HTTP::Error::MalformedRequestError
+      expect { HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'content-length' => ['4'] }, '123') }
+        .to raise_error HTTP::Error::MalformedRequestError
+      expect { HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'] }, '') }.to raise_error HTTP::Error::MalformedRequestError
+      expect { HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], ':authority' => ['localhost:8888'], 'host' => ['example.com'] }, '') }
+        .to raise_error HTTP::Error::MalformedRequestError
+      expect { HTTP::RequestBuilder.build({ ':method' => ['GET'], ':scheme' => ['http'], ':path' => ['/'], 'host' => ['localhost:8888', 'localhost:8888'] }, '') }
+        .to raise_error HTTP::Error::MalformedRequestError
     end
   end
 
