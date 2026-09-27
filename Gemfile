@@ -6,6 +6,7 @@ group :development do
   gem 'rspec'
   gem 'rubocop', '1.82.1'
   gem 'sqlite3'
+  gem 'webrick'
 end
 
 gemspec
