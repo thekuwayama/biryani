@@ -14,8 +14,10 @@ module Biryani
     CONNECTION_PREFACE_LENGTH = CONNECTION_PREFACE.length
     DEFAULT_HEADER_TABLE_SIZE = 4_096
     INITIAL_CONNECTION_WINDOW_SIZE = 65_535
+    LINGER_TIMEOUT = 5
 
-    private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH, :DEFAULT_HEADER_TABLE_SIZE, :INITIAL_CONNECTION_WINDOW_SIZE
+    private_constant :CONNECTION_PREFACE, :CONNECTION_PREFACE_LENGTH, :DEFAULT_HEADER_TABLE_SIZE, :INITIAL_CONNECTION_WINDOW_SIZE,
+                     :LINGER_TIMEOUT
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
@@ -58,14 +60,27 @@ module Biryani
     def recv_loop(io)
       r = Ractor.new(@port) do |port_|
         io_ = Ractor.receive
+        eof = false
         loop do
           obj = Frame.read(io_)
           if obj.nil?
+            eof = true
             port_.send(:eof, move: true)
             break
           end
 
           port_.send([:frame, obj], move: true)
+        end
+
+        # Lingering close: the connection has finished before the peer closes. Discard incoming data until EOF so that close does not send RST.
+        unless eof
+          begin
+            Timeout.timeout(LINGER_TIMEOUT) do
+              loop { io_.readpartial(16_384) }
+            end
+          rescue IOError, SystemCallError, Timeout::Error
+            # EOF, timeout, connection reset, etc.
+          end
         end
       ensure
         io_&.close

@@ -1,3 +1,4 @@
+require 'timeout'
 require 'uri'
 
 require_relative 'biryani/connection_error'
