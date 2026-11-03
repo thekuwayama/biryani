@@ -76,7 +76,8 @@ module Biryani
     # @param io [IO]
     def select_loop(io)
       loop do
-        break if @recv_done && @streams_ctx.empty?
+        # After EOF, no frames arrive from the peer, so only half_closed_remote streams can still progress: by the handler's response.
+        break if closed? || (@recv_done && @streams_ctx.none_half_closed_remote?)
 
         case @port.receive
         in :eof
@@ -86,8 +87,6 @@ module Biryani
         in [:response, res, stream_id]
           handle_response(io, res, stream_id)
         end
-
-        break if closed?
       end
     end
 

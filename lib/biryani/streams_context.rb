@@ -50,6 +50,11 @@ module Biryani
       @h.values.filter(&:active?).length
     end
 
+    # @return [Boolean]
+    def none_half_closed_remote?
+      @h.each_value.none?(&:half_closed_remote?)
+    end
+
     # @return [Integer, nil]
     def receiving_continuation_stream_id
       @h.find { |_, ctx| ctx.receiving_continuation? }&.first

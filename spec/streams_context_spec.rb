@@ -62,4 +62,49 @@ RSpec.describe StreamsContext do
       expect(streams_ctx3.length).to eq 2
     end
   end
+
+  context 'none_half_closed_remote?' do
+    let(:headers) do
+      Frame::Headers.new(true, true, 1, nil, nil, 'this is dummy', nil)
+    end
+    let(:streams_ctx1) do
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx
+    end
+    it 'should not have half_closed_remote' do
+      expect(streams_ctx1.none_half_closed_remote?).to eq true
+    end
+
+    let(:streams_ctx2) do
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx[1].state_transition!(headers, :recv)
+      streams_ctx
+    end
+    it 'should have half_closed_remote' do
+      expect(streams_ctx2.none_half_closed_remote?).to eq false
+    end
+
+    let(:streams_ctx3) do
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx[1].state_transition!(headers, :recv)
+      streams_ctx[1].state_transition!(headers, :send)
+      streams_ctx
+    end
+    it 'should not have half_closed_remote' do
+      expect(streams_ctx3.none_half_closed_remote?).to eq true
+    end
+
+    let(:streams_ctx4) do
+      streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
+      streams_ctx.new_context(1, 65_535, 65_535)
+      streams_ctx[1].state_transition!(Frame::Headers.new(true, false, 1, nil, nil, 'this is dummy', nil), :recv)
+      streams_ctx
+    end
+    it 'should not have half_closed_remote' do
+      expect(streams_ctx4.none_half_closed_remote?).to eq true
+    end
+  end
 end
