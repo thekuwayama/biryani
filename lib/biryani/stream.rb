@@ -18,7 +18,11 @@ module Biryani
             res = HTTP::Response.internal_server_error
           end
 
-          tx.send([:response, res, stream_id], move: true)
+          begin
+            tx.send([:response, res, stream_id], move: true)
+          rescue Ractor::ClosedError
+            # the Connection has already finished, so discard the response
+          end
         end
       end
     end
