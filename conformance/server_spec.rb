@@ -4,7 +4,7 @@ RSpec.describe Server do
   before do
     @tcpserver = TCPServer.open(PORT)
 
-    Ractor.new(@tcpserver) do |socket|
+    r = Ractor.new do
       server = Server.new(
         Ractor.shareable_proc do |_, res|
           res.status = 200
@@ -12,8 +12,9 @@ RSpec.describe Server do
         end
       )
 
-      server.run(socket)
+      server.run(Ractor.receive)
     end
+    r.send(@tcpserver.dup, move: true)
   end
 
   let(:junit_report_file_path) do

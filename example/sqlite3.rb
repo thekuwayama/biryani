@@ -20,13 +20,13 @@ require 'biryani'
 #   |    DB_PORT.receive <---------------+-----------+--+---- DB_PORT.send                         |   |
 #   |    reply.send ---------------------+-----------+--+---> reply.receive                        |   |
 #   |                                    |           |  +------------------------------------------+   |
-#   |  Ractor.new(server, socket)        |           |                                                 |
+#   |  r.send(socket, move: true)        |           |                                                 |
 #   +----+-------------------------------+           +-------------------------------------------------+
 #        |                                                                                          ^
 #        v                                                                                          |
 #   +-- server Ractor ----------------------+       +-- connection Ractor (1 Ractor / connection) --+--+
 #   |  server.run(socket)                   |       |  Stream.new(tx, stream_id, proc)              |  |
-#   |    Ractor.new(socket.accept, @proc) --+------>|    Ractor.new(tx, stream_id, proc) -----------+  |
+#   |    r.send(io, move: true) ------------+------>|    Ractor.new(tx, stream_id, proc) -----------+  |
 #   +---------------------------------------+       +--------------------------------------------------+
 DB_PORT = Ractor::Port.new
 
@@ -159,7 +159,8 @@ server = Biryani::Server.new(
     App.call(req, res)
   end
 )
-Ractor.new(server, socket) { |s, sock| s.run(sock) }
+r = Ractor.new(server) { |s| s.run(Ractor.receive) }
+r.send(socket, move: true)
 DB.serve(path)
 
 # $ bundle exec ruby sqlite3.rb

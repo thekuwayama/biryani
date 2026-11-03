@@ -56,7 +56,8 @@ module Biryani
 
     # @param io [IO]
     def recv_loop(io)
-      Ractor.new(io, @port) do |io_, port_|
+      r = Ractor.new(@port) do |port_|
+        io_ = Ractor.receive
         loop do
           obj = Frame.read(io_)
           if obj.nil?
@@ -66,7 +67,10 @@ module Biryani
 
           port_.send([:frame, obj], move: true)
         end
+      ensure
+        io_&.close
       end
+      r.send(io, move: true)
     end
 
     # @param io [IO]
