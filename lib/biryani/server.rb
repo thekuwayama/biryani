@@ -8,11 +8,15 @@ module Biryani
     # @param socket [Socket]
     def run(socket)
       loop do
-        Ractor.new(socket.accept, @proc) do |io, proc|
+        io = socket.accept
+        r = Ractor.new(@proc) do |proc|
+          io_ = Ractor.receive
           conn = Connection.new(proc)
-          conn.serve(io)
-          io.close
+          conn.serve(io_)
+        ensure
+          io_&.close
         end
+        r.send(io, move: true)
       end
     end
   end
