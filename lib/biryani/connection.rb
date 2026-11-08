@@ -49,11 +49,15 @@ module Biryani
 
       recv_loop(io.clone)
       select_loop(io)
+    rescue *PEER_CLOSED_ERRORS
+      # peer has already closed the connection
     rescue StandardError => e
       puts e.backtrace
-      self.class.do_send(io, Frame::Goaway.new(@streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
+      Biryani.ignore_peer_closed do
+        self.class.do_send(io, Frame::Goaway.new(@streams_ctx.last_stream_id, ErrorCode::INTERNAL_ERROR, 'internal error'), true)
+      end
     ensure
-      io.close_write
+      Biryani.ignore_peer_closed { io.close_write }
     end
 
     # @param io [IO]

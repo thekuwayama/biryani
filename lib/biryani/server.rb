@@ -14,7 +14,7 @@ module Biryani
           conn = Connection.new(proc)
           conn.serve(io_)
         ensure
-          io_&.close
+          Biryani.ignore_peer_closed { io_&.close }
         end
         r.send(io, move: true)
       end
