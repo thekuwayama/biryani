@@ -64,28 +64,7 @@ module Biryani
     def recv_loop(io)
       r = Ractor.new(@port) do |port_|
         io_ = Ractor.receive
-        eof = false
-        loop do
-          obj = Frame.read(io_)
-          if obj.nil?
-            eof = true
-            port_.send(:eof, move: true)
-            break
-          end
-
-          port_.send([:frame, obj], move: true)
-        end
-
-        # Lingering close: the connection has finished before the peer closes. Discard incoming data until EOF so that close does not send RST.
-        unless eof
-          begin
-            Timeout.timeout(LINGER_TIMEOUT) do
-              loop { io_.readpartial(16_384) }
-            end
-          rescue *PEER_CLOSED_ERRORS, Timeout::Error
-            # EOF, timeout, connection reset, etc.
-          end
-        end
+        Connection.recv_frames(io_, port_)
       ensure
         io_&.close
       end
@@ -388,6 +367,35 @@ module Biryani
     def self.read_http2_magic(io)
       s = io.read(CONNECTION_PREFACE_LENGTH)
       ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid connection preface') if s != CONNECTION_PREFACE
+    end
+
+    # @param io [IO]
+    # @param port [Ractor::Port]
+    def self.recv_frames(io, port)
+      loop do
+        obj = Frame.read(io)
+        break if obj.nil?
+
+        port.send([:frame, obj], move: true)
+      rescue Ractor::ClosedError
+        # the connection has finished before the peer closes
+        return linger(io)
+      end
+
+      port.send(:eof, move: true)
+    rescue Ractor::ClosedError
+      # the connection has finished after the peer closes
+    end
+
+    # Lingering close: discard incoming data until EOF so that close does not send RST.
+    #
+    # @param io [IO]
+    def self.linger(io)
+      Timeout.timeout(LINGER_TIMEOUT) do
+        loop { io.readpartial(16_384) }
+      end
+    rescue *PEER_CLOSED_ERRORS, Timeout::Error
+      # EOF, timeout, connection reset, etc.
     end
 
     # @param stream_id [Integer]
