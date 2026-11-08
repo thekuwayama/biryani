@@ -254,6 +254,14 @@ module Biryani
     # @param res [HTTP::Response]
     # @param stream_id [Integer]
     def handle_response(io, res, stream_id)
+      ctx = @streams_ctx[stream_id]
+      # The RST_STREAM frame fully terminates the referenced stream and
+      # causes it to enter the "closed" state.  After receiving a RST_STREAM
+      # on a stream, the receiver MUST NOT send additional frames for that
+      # stream, except for PRIORITY.
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-6.4-5
+      return if ctx.nil? || ctx.closed?
+
       fragment, data = self.class.http_response(res, @encoder)
       max_frame_size = @peer_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]
       self.class.send_headers(io, stream_id, fragment, data.empty?, max_frame_size, @streams_ctx)
