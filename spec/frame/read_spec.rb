@@ -26,5 +26,14 @@ RSpec.describe Frame do
       expect(frame.stream_id).to eq 0x01
       expect(frame.payload).to eq "\xff".b
     end
+
+    let(:reset) do
+      io = StringIO.new
+      allow(io).to receive(:read).and_raise(Errno::ECONNRESET)
+      io
+    end
+    it 'should not read' do
+      expect(Frame.read(reset)).to eq nil
+    end
   end
 end
