@@ -550,7 +550,7 @@ module Biryani
         (length * 8).times do |i|
           bits_len += 1
           bits += 1 if (bytes[i / 8] & (1 << 7 - (i % 8))).positive?
-          raise Error::HuffmanDecodeError if bits == EOS
+          raise Error::HuffmanDecodeError, 'EOS in huffman-encoded string' if bits == EOS
 
           if (chr = DECODE_TABLE[[bits, bits_len]])
             res << chr
@@ -560,7 +560,7 @@ module Biryani
             bits <<= 1
           end
         end
-        raise Error::HuffmanDecodeError if bits_len.positive? && bits != (2 << bits_len) - 2 || bits_len >= 8
+        raise Error::HuffmanDecodeError, 'invalid huffman padding' if bits_len.positive? && bits != (2 << bits_len) - 2 || bits_len >= 8
 
         res
       end

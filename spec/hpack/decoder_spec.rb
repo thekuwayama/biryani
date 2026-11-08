@@ -166,5 +166,16 @@ HEXDUMP
                              ['set-cookie', 'foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1']
                            ]
     end
+
+    it 'should not decode' do
+      expect { decoder.decode("\x00\x84\xff\xff\xff\xff\x00".b) }.to raise_error HPACK::Error::HuffmanDecodeError
+      expect { decoder.decode("\x00\x82\xf8\xff\x00".b) }.to raise_error HPACK::Error::HuffmanDecodeError
+      expect { decoder.decode("\x80".b) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { decoder.decode("\xbe".b) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { decoder.decode("\xff\xff\xff\xff\xff\x0f".b) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { decoder.decode("\x40\x0a\x63\x75\x73".b) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { decoder.decode("\x3f\xe2\x1f".b) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { decoder.decode("\x82\x20".b) }.to raise_error HPACK::Error::HPACKDecodeError
+    end
   end
 end
