@@ -8,6 +8,8 @@ module Biryani
 
       # @param s [String]
       #
+      # @raise [HPACK::Error::Error]
+      #
       # @return [Array]
       def decode(s)
         Fields.decode(s.force_encoding(Encoding::ASCII_8BIT), @dynamic_table)

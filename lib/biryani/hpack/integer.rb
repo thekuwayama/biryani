@@ -1,6 +1,10 @@
 module Biryani
   module HPACK
     module Integer
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-7.4
+      MAX_DECODED_INTEGER = (1 << 32) - 1
+      private_constant :MAX_DECODED_INTEGER
+
       # if I < 2^N - 1, encode I on N bits
       # else
       #     encode (2^N - 1) on N bits
@@ -44,10 +48,14 @@ module Biryani
       # @param cursor [Integer]
       # @param n [Integer]
       #
+      # @raise [HPACKDecodeError]
+      #
       # @return [Integer]
       # @return [Integer]
       def self.decode(io, n, cursor)
         limit = (1 << n) - 1
+        raise Error::HPACKDecodeError, 'integer exceeds field block' if cursor >= io.size
+
         h = io.get_value(:U8, cursor)
         return [h & limit, cursor + 1] if (h & limit) != limit
 
@@ -55,8 +63,11 @@ module Biryani
         c = cursor + 1
         i = 0
         loop do
+          raise Error::HPACKDecodeError, 'integer exceeds field block' if c + i >= io.size
+
           byte = io.get_value(:U8, c + i)
           res += (byte & 127) << (i * 7)
+          raise Error::HPACKDecodeError, 'integer overflow' if res > MAX_DECODED_INTEGER
 
           break if (byte & 128).zero?
 

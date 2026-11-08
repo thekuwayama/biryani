@@ -51,7 +51,7 @@ module Biryani
       #
       # @return [Array] [name, value]
       def entry_at(index)
-        raise Error::HPACKDecodeError if index.zero? || index > STATIC_TABLE_SIZE + count_entries
+        raise Error::HPACKDecodeError, "invalid index #{index}" if index.zero? || index > STATIC_TABLE_SIZE + count_entries
 
         if index <= STATIC_TABLE_SIZE
           STATIC_TABLE[index - 1]

@@ -29,5 +29,13 @@ RSpec.describe HPACK::Integer do
       expect(HPACK::Integer.decode(IO::Buffer.for("\x7f\x80\x01".b), 7, cursor)).to eq [255, 3]
       expect(HPACK::Integer.decode(IO::Buffer.for("\x1f\xa1\x8d\xb7\x01".b), 5, cursor)).to eq [3_000_000, 5]
     end
+
+    it 'should not decode' do
+      expect { HPACK::Integer.decode(IO::Buffer.for(''.b), 5, cursor) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { HPACK::Integer.decode(IO::Buffer.for("\x1f".b), 5, cursor) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { HPACK::Integer.decode(IO::Buffer.for("\x1f\x9a".b), 5, cursor) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { HPACK::Integer.decode(IO::Buffer.for("\x1f\xff\xff\xff\xff\x0f".b), 5, cursor) }.to raise_error HPACK::Error::HPACKDecodeError
+      expect { HPACK::Integer.decode(IO::Buffer.for("\x1f#{"\x80" * 16}\x01".b), 5, cursor) }.to raise_error HPACK::Error::HPACKDecodeError
+    end
   end
 end

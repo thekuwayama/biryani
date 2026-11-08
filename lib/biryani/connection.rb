@@ -403,7 +403,7 @@ module Biryani
       ctx.content << data
       if ctx.half_closed_remote?
         obj = http_request(stream_id, ctx.fragment, ctx.content, decoder)
-        ctx << nil if obj.is_a?(StreamError) # terminate the Stream Ractor waiting for a request
+        ctx << nil if Biryani.err?(obj) # terminate the Stream Ractor waiting for a request
         return obj if Biryani.err?(obj)
 
         ctx << obj
@@ -426,7 +426,7 @@ module Biryani
       ctx.fragment << headers.fragment
       if ctx.half_closed_remote?
         obj = http_request(headers.stream_id, ctx.fragment, ctx.content, decoder)
-        ctx << nil if obj.is_a?(StreamError) # terminate the Stream Ractor waiting for a request
+        ctx << nil if Biryani.err?(obj) # terminate the Stream Ractor waiting for a request
         return obj if Biryani.err?(obj)
 
         ctx << obj
@@ -501,13 +501,13 @@ module Biryani
     #
     # @return [HTTP::Request, ConnectionError, StreamError]
     def self.http_request(stream_id, fragment, content, decoder)
-      obj = decoder.decode(fragment)
-      return obj if Biryani.err?(obj)
-
-      fields = obj
+      fields = decoder.decode(fragment)
       builder = HTTP::RequestBuilder.new
       builder.fields(fields)
       builder.build(content)
+    rescue HPACK::Error::Error => e
+      # https://datatracker.ietf.org/doc/html/rfc9113#section-4.3-3
+      ConnectionError.new(ErrorCode::COMPRESSION_ERROR, e.message)
     rescue HTTP::Error::MalformedRequestError => e
       # https://datatracker.ietf.org/doc/html/rfc9113#section-8.1.1-3
       StreamError.new(ErrorCode::PROTOCOL_ERROR, stream_id, e.message)

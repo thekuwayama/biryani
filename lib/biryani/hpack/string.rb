@@ -26,11 +26,18 @@ module Biryani
       # @param io [IO::Buffer]
       # @param cursor [Integer]
       #
+      # @raise [HPACKDecodeError]
+      # @raise [HuffmanDecodeError]
+      #
       # @return [String]
       # @return [Integer]
       def self.decode(io, cursor)
+        raise Error::HPACKDecodeError, 'string exceeds field block' if cursor >= io.size
+
         h = (io.get_value(:U8, cursor) & 0b10000000).positive?
         len, c = Integer.decode(io, 7, cursor)
+        raise Error::HPACKDecodeError, 'string exceeds field block' if c + len > io.size
+
         return [Huffman.decode(io, c, len), c + len] if h
 
         [io.get_string(c, len), c + len]
