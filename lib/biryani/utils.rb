@@ -20,4 +20,13 @@ module Biryani
       obj
     end
   end
+
+  # Errors raised when the peer has already closed the connection (EOF, EPIPE, ECONNRESET, etc.)
+  PEER_CLOSED_ERRORS = Ractor.make_shareable([IOError, SystemCallError])
+
+  def self.ignore_peer_closed
+    yield
+  rescue *PEER_CLOSED_ERRORS
+    nil
+  end
 end

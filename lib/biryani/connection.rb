@@ -78,7 +78,7 @@ module Biryani
             Timeout.timeout(LINGER_TIMEOUT) do
               loop { io_.readpartial(16_384) }
             end
-          rescue IOError, SystemCallError, Timeout::Error
+          rescue *PEER_CLOSED_ERRORS, Timeout::Error
             # EOF, timeout, connection reset, etc.
           end
         end
