@@ -17,7 +17,7 @@ RSpec.describe Connection do
     end
 
     let(:broken_pipe) do
-      io = StringIO.new("\x00xffPRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
+      io = StringIO.new("\x00\xffPRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".b)
       allow(io).to receive(:write).and_raise(Errno::EPIPE)
       allow(io).to receive(:close_write).and_raise(Errno::EPIPE)
       io
