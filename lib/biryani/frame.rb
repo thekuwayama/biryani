@@ -157,10 +157,13 @@ module Biryani
 
       payload_length, f_type, flags, stream_id = read_header(s)
       payload = io.read(payload_length)
-      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if payload.bytesize != payload_length
+      return ConnectionError.new(ErrorCode::PROTOCOL_ERROR, 'invalid frame') if payload.nil? || payload.bytesize != payload_length
       return Frame::Unknown.new(f_type, flags, stream_id, payload) unless FRAME_MAP.key?(f_type)
 
       FRAME_MAP[f_type].read(payload, flags, stream_id)
+    rescue *PEER_CLOSED_ERRORS
+      # the peer has closed the connection (e.g. ECONNRESET): treat it as EOF
+      nil
     rescue StandardError
       ConnectionError.new(ErrorCode::FRAME_SIZE_ERROR, 'invalid frame')
     end

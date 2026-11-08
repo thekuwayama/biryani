@@ -38,4 +38,16 @@ RSpec.describe Biryani do
       expect(Biryani.unwrap(stream_error, 0x01)).to be_kind_of Frame::RstStream
     end
   end
+
+  context 'ignore_peer_closed' do
+    it 'should ignore errors raised because the peer has closed the connection' do
+      expect { Biryani.ignore_peer_closed { raise Errno::EPIPE } }.not_to raise_error
+      expect { Biryani.ignore_peer_closed { raise Errno::ECONNRESET } }.not_to raise_error
+      expect { Biryani.ignore_peer_closed { raise IOError } }.not_to raise_error
+    end
+
+    it 'should not ignore other errors' do
+      expect { Biryani.ignore_peer_closed { raise StandardError } }.to raise_error StandardError
+    end
+  end
 end
