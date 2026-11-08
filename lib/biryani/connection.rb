@@ -66,7 +66,7 @@ module Biryani
         io_ = Ractor.receive
         Connection.recv_frames(io_, port_)
       ensure
-        io_&.close
+        Biryani.ignore_peer_closed { io_&.close }
       end
       r.send(io, move: true)
     end
