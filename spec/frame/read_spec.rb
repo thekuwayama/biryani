@@ -35,5 +35,14 @@ RSpec.describe Frame do
     it 'should not read' do
       expect(Frame.read(reset)).to eq nil
     end
+
+    let(:truncated_payload) do
+      StringIO.new("\x00\x00\x01\x0a\x01\x00\x00\x00\x01".b)
+    end
+    it 'should not read' do
+      obj = Frame.read(truncated_payload)
+      expect(obj).to be_kind_of ConnectionError
+      expect(obj.goaway(0).error_code).to eq ErrorCode::PROTOCOL_ERROR
+    end
   end
 end
