@@ -114,7 +114,9 @@ module Biryani
     # @param proc [Proc]
     # @param tx [Ractor::Port]
     def initialize(stream_id, send_initial_window_size, recv_initial_window_size, proc, tx)
-      @stream = Stream.new(tx, stream_id, proc)
+      @stream_id = stream_id
+      @proc = proc
+      @tx = tx
       @send_window = Window.new(send_initial_window_size)
       @recv_window = Window.new(recv_initial_window_size)
       @fragment = ''.b
@@ -124,7 +126,7 @@ module Biryani
 
     # @param req [HTTP::Request]
     def <<(req)
-      @stream.rx.send(req, move: true)
+      Stream.new(@tx, @stream_id, @proc).rx.send(req, move: true)
     end
 
     def close
