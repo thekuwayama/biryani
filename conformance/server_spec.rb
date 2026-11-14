@@ -12,7 +12,7 @@ RSpec.describe Server do
         end
       )
 
-      server.run(Ractor.receive)
+      server.run(Ractor.recv)
     end
     r.send(@tcpserver.dup, move: true)
   end

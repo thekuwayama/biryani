@@ -2,10 +2,14 @@ module Biryani
   class StreamsContext
     attr_accessor :tx
 
-    def initialize(proc, tx)
+    # @param proc [Proc]
+    # @param tx [Ractor::Port]
+    # @param workers [Array<Ractor>, nil]
+    def initialize(proc, tx, workers = nil)
       @h = {} # Hash<Integer, StreamContext>
       @proc = proc
       @tx = tx
+      @workers = workers
     end
 
     # @param stream_id [Integer]
@@ -14,7 +18,7 @@ module Biryani
     #
     # @return [StreamContext]
     def new_context(stream_id, send_initial_window_size, recv_initial_window_size)
-      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, @proc, @tx)
+      ctx = StreamContext.new(stream_id, send_initial_window_size, recv_initial_window_size, @proc, @tx, @workers)
       @h[stream_id] = ctx
       ctx
     end
@@ -113,10 +117,12 @@ module Biryani
     # @param recv_initial_window_size [Integer]
     # @param proc [Proc]
     # @param tx [Ractor::Port]
-    def initialize(stream_id, send_initial_window_size, recv_initial_window_size, proc, tx)
+    # @param workers [Array<Ractor>, nil]
+    def initialize(stream_id, send_initial_window_size, recv_initial_window_size, proc, tx, workers = nil)
       @stream_id = stream_id
       @proc = proc
       @tx = tx
+      @workers = workers
       @send_window = Window.new(send_initial_window_size)
       @recv_window = Window.new(recv_initial_window_size)
       @fragment = ''.b
@@ -126,7 +132,7 @@ module Biryani
 
     # @param req [HTTP::Request]
     def <<(req)
-      Stream.new(@tx, @stream_id, @proc).rx.send(req, move: true)
+      Stream.new(@tx, @stream_id, @proc, @workers).rx.send(req, move: true)
     end
 
     def close

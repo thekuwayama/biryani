@@ -21,12 +21,12 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
-    # proc [Proc]
-    def initialize(proc)
+    # @param proc [Proc]
+    # @param workers [Array<Ractor>, nil]
+    def initialize(proc, workers = nil)
       @port = Ractor::Port.new
       @recv_done = false
-      @proc = proc
-      @streams_ctx = StreamsContext.new(proc, @port)
+      @streams_ctx = StreamsContext.new(proc, @port, workers)
       @encoder = HPACK::Encoder.new(DEFAULT_HEADER_TABLE_SIZE)
       @decoder = HPACK::Decoder.new(DEFAULT_HEADER_TABLE_SIZE)
       @send_window = Window.new(INITIAL_CONNECTION_WINDOW_SIZE)
@@ -63,7 +63,7 @@ module Biryani
     # @param io [IO]
     def recv_loop(io)
       r = Ractor.new(@port) do |port_|
-        io_ = Ractor.receive
+        io_ = Ractor.recv
         Connection.recv_frames(io_, port_)
       ensure
         Biryani.ignore_peer_closed { io_&.close }

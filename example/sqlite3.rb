@@ -159,7 +159,7 @@ server = Biryani::Server.new(
     App.call(req, res)
   end
 )
-r = Ractor.new(server) { |s| s.run(Ractor.receive) }
+r = Ractor.new(server) { |s| s.run(Ractor.recv) }
 r.send(socket, move: true)
 DB.serve(path)
 
