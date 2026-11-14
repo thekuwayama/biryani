@@ -406,7 +406,6 @@ module Biryani
     #
     # @return [Array<WindowUpdate>, ConnectionError, StreamError]
     # rubocop: disable Metrics/AbcSize
-    # rubocop: disable Metrics/CyclomaticComplexity
     def self.handle_data(stream_id, data, recv_window, streams_ctx, decoder)
       ctx = streams_ctx[stream_id]
       return ConnectionError.new(ErrorCode::FLOW_CONTROL_ERROR, 'DATA Frame length exceeds flow-control window size') \
@@ -415,7 +414,6 @@ module Biryani
       ctx.content << data
       if ctx.half_closed_remote?
         obj = http_request(stream_id, ctx.fragment, ctx.content, decoder)
-        ctx << nil if Biryani.err?(obj) # terminate the Stream Ractor waiting for a request
         return obj if Biryani.err?(obj)
 
         ctx << obj
@@ -427,7 +425,6 @@ module Biryani
       window_updates
     end
     # rubocop: enable Metrics/AbcSize
-    # rubocop: enable Metrics/CyclomaticComplexity
 
     # @param headers [Headers]
     # @param ctx [StreamContext]
@@ -438,7 +435,6 @@ module Biryani
       ctx.fragment << headers.fragment
       if ctx.half_closed_remote?
         obj = http_request(headers.stream_id, ctx.fragment, ctx.content, decoder)
-        ctx << nil if Biryani.err?(obj) # terminate the Stream Ractor waiting for a request
         return obj if Biryani.err?(obj)
 
         ctx << obj
