@@ -5,8 +5,8 @@ RSpec.describe Connection do
     let(:send_settings) do
       Connection.default_settings
     end
-    let(:decoder) do
-      HPACK::Decoder.new(4_096)
+    let(:encoder) do
+      HPACK::Encoder.new(4_096)
     end
     let(:streams_ctx) do
       streams_ctx = StreamsContext.new(do_nothing_proc, Ractor::Port.new)
@@ -19,19 +19,28 @@ RSpec.describe Connection do
       Frame::Settings.new(false, 0, { SettingsID::SETTINGS_HEADER_TABLE_SIZE => 8_192 })
     end
     it 'should handle' do
-      reply_settings = Connection.handle_settings(settings1, send_settings, decoder, streams_ctx)
+      reply_settings = Connection.handle_settings(settings1, send_settings, encoder, streams_ctx)
       expect(reply_settings.ack?).to eq true
       expect(reply_settings.setting.empty?).to eq true
       expect(send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]).to eq 0xffffffff
       expect(send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).to eq 16_384
       expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 8_192
+      expect(encoder.instance_variable_get(:@dynamic_table).limit).to eq 4_096
     end
 
     let(:settings2) do
       Frame::Settings.new(true, 0, {})
     end
     it 'should handle' do
-      expect(Connection.handle_settings(settings2, send_settings, decoder, streams_ctx)).to eq nil
+      expect(Connection.handle_settings(settings2, send_settings, encoder, streams_ctx)).to eq nil
+    end
+
+    let(:settings3) do
+      Frame::Settings.new(false, 0, { SettingsID::SETTINGS_HEADER_TABLE_SIZE => 0 })
+    end
+    it 'should apply SETTINGS_HEADER_TABLE_SIZE to the encoder' do
+      Connection.handle_settings(settings3, send_settings, encoder, streams_ctx)
+      expect(encoder.instance_variable_get(:@dynamic_table).limit).to eq 0
     end
   end
 end
