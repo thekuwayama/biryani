@@ -31,8 +31,14 @@ RSpec.describe HPACK::Field do
       expect(dynamic_table.limit).to eq 4096
       expect(dynamic_table.size).to eq 'custom-keycustom-header'.bytesize + 32
       expect(HPACK::Field.decode(IO::Buffer.for("\x20".b), cursor, dynamic_table)).to eq [nil, 1]
-      expect(dynamic_table.limit).to eq 4096
+      expect(dynamic_table.limit).to eq 0
+      expect(dynamic_table.max_limit).to eq 4096
       expect(dynamic_table.size).to eq 0
+      expect(HPACK::Field.decode(IO::Buffer.for("\x40\x88\x25\xa8\x49\xe9\x5b\xa9\x7d\x7f\x89\x25\xa8\x49\xe9\x5a\x72\x8e\x42\xd9".b), cursor, dynamic_table)).to eq [%w[custom-key custom-header], 20]
+      expect(dynamic_table.count_entries).to eq 0
+      expect(HPACK::Field.decode(IO::Buffer.for("\x3f\xe1\x1f".b), cursor, dynamic_table)).to eq [nil, 3]
+      expect(dynamic_table.limit).to eq 4096
+      expect(dynamic_table.max_limit).to eq 4096
     end
 
     it 'should not decode' do

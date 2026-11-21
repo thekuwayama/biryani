@@ -1,13 +1,14 @@
 module Biryani
   module HPACK
     class DynamicTable
-      attr_reader :size, :limit
+      attr_reader :size, :limit, :max_limit
 
       # @param limit [Integer]
       def initialize(limit)
         @table = []
         @size = 0
         @limit = limit
+        @max_limit = limit
       end
 
       # @return [Integer]
@@ -77,6 +78,12 @@ module Biryani
 
       # @param new_limit [Integer]
       def limit!(new_limit)
+        resize!(new_limit)
+        @max_limit = new_limit
+      end
+
+      # @param new_limit [Integer]
+      def resize!(new_limit)
         chomp!(new_limit)
         @limit = new_limit
       end

@@ -84,6 +84,7 @@ HEXDUMP
       expect(decoder.decode(encoder.encode(fields))).to eq fields
       encoder.limit!(0)
       expect(decoder.decode(encoder.encode(fields))).to eq fields
+      expect(decoder.instance_variable_get(:@dynamic_table).count_entries).to eq 0
     end
   end
 end
