@@ -45,4 +45,45 @@ HEXDUMP
 HEXDUMP
     end
   end
+
+  context 'dynamic table size update' do
+    let(:encoder) do
+      HPACK::Encoder.new(4_096)
+    end
+    let(:fields) do
+      [[':status', '200']]
+    end
+
+    it 'should not signal if the limit is not changed' do
+      expect(encoder.encode(fields)).to eq "\x88".b
+      encoder.limit!(4_096)
+      expect(encoder.encode(fields)).to eq "\x88".b
+    end
+
+    it 'should signal the new limit at the beginning of the next field block only' do
+      encoder.limit!(0)
+      expect(encoder.encode(fields)).to eq "\x20\x88".b
+      expect(encoder.encode(fields)).to eq "\x88".b
+    end
+
+    it 'should signal the smallest and the final limit' do
+      encoder.limit!(0)
+      encoder.limit!(1_024)
+      expect(encoder.encode(fields)).to eq "\x20\x3f\xe1\x07\x88".b
+    end
+
+    it 'should signal the smallest limit even if the final limit is restored' do
+      encoder.limit!(256)
+      encoder.limit!(4_096)
+      expect(encoder.encode(fields)).to eq "\x3f\xe1\x01\x3f\xe1\x1f\x88".b
+    end
+
+    it 'should be decoded by the decoder' do
+      decoder = HPACK::Decoder.new(4_096)
+      fields = [%w[x-foo bar]]
+      expect(decoder.decode(encoder.encode(fields))).to eq fields
+      encoder.limit!(0)
+      expect(decoder.decode(encoder.encode(fields))).to eq fields
+    end
+  end
 end
