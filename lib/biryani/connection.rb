@@ -449,18 +449,18 @@ module Biryani
       ctx.close
     end
 
-    # @param settings [Settings]
+    # @param recv_settings [Settings]
     # @param peer_settings [Hash<Integer, Integer>]
     # @param encoder [Encoder]
     # @param streams_ctx [StreamsContext]
     #
     # @return [Settings]
-    def self.handle_settings(settings, peer_settings, encoder, streams_ctx)
-      return nil if settings.ack?
+    def self.handle_settings(recv_settings, peer_settings, encoder, streams_ctx)
+      return nil if recv_settings.ack?
 
-      peer_settings.merge!(settings.setting)
-      if settings.setting.key?(SettingsID::SETTINGS_HEADER_TABLE_SIZE)
-        new_limit = [settings.setting[SettingsID::SETTINGS_HEADER_TABLE_SIZE], DEFAULT_HEADER_TABLE_SIZE].min
+      peer_settings.merge!(recv_settings.setting)
+      if recv_settings.setting.key?(SettingsID::SETTINGS_HEADER_TABLE_SIZE)
+        new_limit = [recv_settings.setting[SettingsID::SETTINGS_HEADER_TABLE_SIZE], DEFAULT_HEADER_TABLE_SIZE].min
         encoder.limit!(new_limit)
       end
       send_initial_window_size = peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
