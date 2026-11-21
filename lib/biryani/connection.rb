@@ -461,6 +461,7 @@ module Biryani
       peer_settings.merge!(recv_settings.setting)
       if recv_settings.setting.key?(SettingsID::SETTINGS_HEADER_TABLE_SIZE)
         new_limit = [recv_settings.setting[SettingsID::SETTINGS_HEADER_TABLE_SIZE], DEFAULT_HEADER_TABLE_SIZE].min
+        peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE] = new_limit
         encoder.limit!(new_limit)
       end
       send_initial_window_size = peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]

@@ -24,7 +24,7 @@ RSpec.describe Connection do
       expect(reply_settings.setting.empty?).to eq true
       expect(send_settings[SettingsID::SETTINGS_MAX_CONCURRENT_STREAMS]).to eq 0xffffffff
       expect(send_settings[SettingsID::SETTINGS_MAX_FRAME_SIZE]).to eq 16_384
-      expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 8_192
+      expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 4_096
       expect(encoder.instance_variable_get(:@dynamic_table).limit).to eq 4_096
     end
 
@@ -40,6 +40,7 @@ RSpec.describe Connection do
     end
     it 'should apply SETTINGS_HEADER_TABLE_SIZE to the encoder' do
       Connection.handle_settings(settings3, send_settings, encoder, streams_ctx)
+      expect(send_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]).to eq 0
       expect(encoder.instance_variable_get(:@dynamic_table).limit).to eq 0
     end
   end
