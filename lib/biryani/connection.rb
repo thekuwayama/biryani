@@ -145,7 +145,7 @@ module Biryani
       when FrameType::DATA, FrameType::HEADERS, FrameType::PRIORITY, FrameType::RST_STREAM, FrameType::PUSH_PROMISE, FrameType::CONTINUATION
         [ConnectionError.new(ErrorCode::PROTOCOL_ERROR, "invalid frame type #{format('0x%02x', frame.f_type)} for stream identifier 0x00")]
       when FrameType::SETTINGS
-        obj = self.class.handle_settings(frame, @peer_settings, @decoder, @streams_ctx)
+        obj = self.class.handle_settings(frame, @peer_settings, @encoder, @streams_ctx)
         return [] if obj.nil?
 
         settings_ack = obj
@@ -449,18 +449,21 @@ module Biryani
       ctx.close
     end
 
-    # @param settings [Settings]
+    # @param recv_settings [Settings]
     # @param peer_settings [Hash<Integer, Integer>]
-    # @param decoder [Decoder]
+    # @param encoder [Encoder]
     # @param streams_ctx [StreamsContext]
     #
     # @return [Settings]
-    def self.handle_settings(settings, peer_settings, decoder, streams_ctx)
-      return nil if settings.ack?
+    def self.handle_settings(recv_settings, peer_settings, encoder, streams_ctx)
+      return nil if recv_settings.ack?
 
-      peer_settings.merge!(settings.setting)
-      new_limit = peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE]
-      decoder.limit!(new_limit)
+      peer_settings.merge!(recv_settings.setting)
+      if recv_settings.setting.key?(SettingsID::SETTINGS_HEADER_TABLE_SIZE)
+        new_limit = [recv_settings.setting[SettingsID::SETTINGS_HEADER_TABLE_SIZE], DEFAULT_HEADER_TABLE_SIZE].min
+        peer_settings[SettingsID::SETTINGS_HEADER_TABLE_SIZE] = new_limit
+        encoder.limit!(new_limit)
+      end
       send_initial_window_size = peer_settings[SettingsID::SETTINGS_INITIAL_WINDOW_SIZE]
       streams_ctx.each do |ctx|
         ctx.send_window.update!(send_initial_window_size)
