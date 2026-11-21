@@ -1,11 +1,11 @@
 module Biryani
   module HPACK
     class Encoder
-      # @param dynamic_table_limit [Integer]
-      def initialize(dynamic_table_limit)
-        @dynamic_table = DynamicTable.new(dynamic_table_limit)
-        @signaled_limit = dynamic_table_limit
-        @min_limit = nil
+      # @param max_size_limit [Integer]
+      def initialize(max_size_limit)
+        @dynamic_table = DynamicTable.new(max_size_limit)
+        @signaled_max_size = max_size_limit
+        @min_max_size = nil
       end
 
       # @param fields [Array]
@@ -15,10 +15,10 @@ module Biryani
         (dynamic_table_size_update + Fields.encode(fields, @dynamic_table)).force_encoding(Encoding::ASCII_8BIT)
       end
 
-      # @param new_limit [Integer]
-      def limit!(new_limit)
-        @dynamic_table.limit!(new_limit)
-        @min_limit = [@min_limit || new_limit, new_limit].min
+      # @param new_max_size_limit [Integer]
+      def max_size_limit!(new_max_size_limit)
+        @dynamic_table.max_size_limit!(new_max_size_limit)
+        @min_max_size = [@min_max_size || new_max_size_limit, new_max_size_limit].min
       end
 
       private
@@ -27,14 +27,14 @@ module Biryani
       #
       # @return [String]
       def dynamic_table_size_update
-        return ''.b if @min_limit.nil?
+        return ''.b if @min_max_size.nil?
 
-        limit = @dynamic_table.limit
+        max_size = @dynamic_table.max_size
         updates = []
-        updates << @min_limit if @min_limit < @signaled_limit
-        updates << limit if limit != updates.last && (!updates.empty? || limit != @signaled_limit)
-        @signaled_limit = limit
-        @min_limit = nil
+        updates << @min_max_size if @min_max_size < @signaled_max_size
+        updates << max_size if max_size != updates.last && (!updates.empty? || max_size != @signaled_max_size)
+        @signaled_max_size = max_size
+        @min_max_size = nil
 
         updates.map { |i| Integer.encode(i, 5, 0b00100000) }.join.b
       end

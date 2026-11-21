@@ -54,27 +54,27 @@ HEXDUMP
       [[':status', '200']]
     end
 
-    it 'should not signal if the limit is not changed' do
+    it 'should not signal if the maximum size is not changed' do
       expect(encoder.encode(fields)).to eq "\x88".b
-      encoder.limit!(4_096)
+      encoder.max_size_limit!(4_096)
       expect(encoder.encode(fields)).to eq "\x88".b
     end
 
-    it 'should signal the new limit at the beginning of the next field block only' do
-      encoder.limit!(0)
+    it 'should signal the new maximum size at the beginning of the next field block only' do
+      encoder.max_size_limit!(0)
       expect(encoder.encode(fields)).to eq "\x20\x88".b
       expect(encoder.encode(fields)).to eq "\x88".b
     end
 
-    it 'should signal the smallest and the final limit' do
-      encoder.limit!(0)
-      encoder.limit!(1_024)
+    it 'should signal the smallest and the final maximum size' do
+      encoder.max_size_limit!(0)
+      encoder.max_size_limit!(1_024)
       expect(encoder.encode(fields)).to eq "\x20\x3f\xe1\x07\x88".b
     end
 
-    it 'should signal the smallest limit even if the final limit is restored' do
-      encoder.limit!(256)
-      encoder.limit!(4_096)
+    it 'should signal the smallest maximum size even if the final maximum size is restored' do
+      encoder.max_size_limit!(256)
+      encoder.max_size_limit!(4_096)
       expect(encoder.encode(fields)).to eq "\x3f\xe1\x01\x3f\xe1\x1f\x88".b
     end
 
@@ -82,7 +82,7 @@ HEXDUMP
       decoder = HPACK::Decoder.new(4_096)
       fields = [%w[x-foo bar]]
       expect(decoder.decode(encoder.encode(fields))).to eq fields
-      encoder.limit!(0)
+      encoder.max_size_limit!(0)
       expect(decoder.decode(encoder.encode(fields))).to eq fields
       expect(decoder.instance_variable_get(:@dynamic_table).count_entries).to eq 0
     end

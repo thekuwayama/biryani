@@ -219,9 +219,9 @@ module Biryani
           unless cursor.zero? || (io.get_value(:U8, 0) & 0b00100000).positive? && Integer.decode(io, 5, 0)[1] == cursor
 
         max_size, c = Integer.decode(io, 5, cursor)
-        raise Error::HPACKDecodeError, 'dynamic table size update exceeds the limit' if max_size > dynamic_table.max_limit
+        raise Error::HPACKDecodeError, 'dynamic table size update exceeds the limit' if max_size > dynamic_table.max_size_limit
 
-        dynamic_table.resize!(max_size)
+        dynamic_table.max_size!(max_size)
         [nil, c]
       end
 
