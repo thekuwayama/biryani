@@ -68,14 +68,6 @@ module Biryani
         entry_at(index)[0]
       end
 
-      # @param max_size [Integer]
-      def chomp!(max_size)
-        while @size > max_size
-          n, v = @table.pop
-          @size -= n.bytesize + v.bytesize + 32
-        end
-      end
-
       # @param new_max_size_limit [Integer]
       def max_size_limit!(new_max_size_limit)
         max_size!(new_max_size_limit)
@@ -86,6 +78,16 @@ module Biryani
       def max_size!(new_max_size)
         chomp!(new_max_size)
         @max_size = new_max_size
+      end
+
+      private
+
+      # @param max_size [Integer]
+      def chomp!(max_size)
+        while @size > max_size
+          n, v = @table.pop
+          @size -= n.bytesize + v.bytesize + 32
+        end
       end
     end
   end
