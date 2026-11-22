@@ -1,12 +1,13 @@
 module Biryani
   module HPACK
     class DynamicTable
-      attr_reader :size, :max_size_limit
+      attr_reader :size, :max_size, :max_size_limit
 
       # @param max_size_limit [Integer]
       def initialize(max_size_limit)
         @table = []
         @size = 0
+        @max_size = max_size_limit
         @max_size_limit = max_size_limit
       end
 
@@ -20,7 +21,7 @@ module Biryani
       def store(name, value)
         @table.unshift([name, value])
         @size += name.bytesize + value.bytesize + 32
-        chomp!(@max_size_limit)
+        chomp!(@max_size)
       end
 
       # @param name [String]
@@ -67,18 +68,26 @@ module Biryani
         entry_at(index)[0]
       end
 
+      # @param new_max_size_limit [Integer]
+      def max_size_limit!(new_max_size_limit)
+        max_size!(new_max_size_limit)
+        @max_size_limit = new_max_size_limit
+      end
+
+      # @param new_max_size [Integer]
+      def max_size!(new_max_size)
+        chomp!(new_max_size)
+        @max_size = new_max_size
+      end
+
+      private
+
       # @param max_size [Integer]
       def chomp!(max_size)
         while @size > max_size
           n, v = @table.pop
           @size -= n.bytesize + v.bytesize + 32
         end
-      end
-
-      # @param new_max_size_limit [Integer]
-      def max_size_limit!(new_max_size_limit)
-        chomp!(new_max_size_limit)
-        @max_size_limit = new_max_size_limit
       end
     end
   end

@@ -221,7 +221,7 @@ module Biryani
         max_size, c = Integer.decode(io, 5, cursor)
         raise Error::HPACKDecodeError, 'dynamic table size update exceeds the limit' if max_size > dynamic_table.max_size_limit
 
-        dynamic_table.chomp!(max_size)
+        dynamic_table.max_size!(max_size)
         [nil, c]
       end
 
