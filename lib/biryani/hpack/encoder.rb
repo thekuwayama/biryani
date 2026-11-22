@@ -22,7 +22,10 @@ module Biryani
 
       private
 
+      # signal @unsignaled_min_max_size, the smallest max_size not yet signaled since the last field block,
+      # before the final max_size so that the decoder evicts the same entries.
       # https://datatracker.ietf.org/doc/html/rfc7541#section-4.2
+      # https://datatracker.ietf.org/doc/html/rfc7541#section-6.3
       #
       # @return [String]
       def dynamic_table_size_update
