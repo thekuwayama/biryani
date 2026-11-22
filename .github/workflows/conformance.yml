@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Ruby
-        uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
         with:
           ruby-version: ${{ matrix.ruby-version }}
       - name: Install dependencies
@@ -40,7 +40,7 @@ jobs:
           echo $GITHUB_WORKSPACE/bin >> $GITHUB_PATH
       - name: Run conformance test
         run: bundle exec rake conformance
-      - uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+      - uses: mikepenz/action-junit-report@a16be3a69023e9bd7e748ede768b3282ea7b30ce # v6.7.1
         if: success()
         with:
           report_paths: conformance/reports/h2spec.xml
