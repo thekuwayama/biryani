@@ -1,9 +1,9 @@
 module Biryani
   module HPACK
     class Encoder
-      # @param dynamic_table_limit [Integer]
-      def initialize(dynamic_table_limit)
-        @dynamic_table = DynamicTable.new(dynamic_table_limit)
+      # @param max_size_limit [Integer]
+      def initialize(max_size_limit)
+        @dynamic_table = DynamicTable.new(max_size_limit)
       end
 
       # @param fields [Array]
@@ -13,9 +13,9 @@ module Biryani
         Fields.encode(fields, @dynamic_table).force_encoding(Encoding::ASCII_8BIT)
       end
 
-      # @param new_limit [Integer]
-      def limit!(new_limit)
-        @dynamic_table.limit!(new_limit)
+      # @param new_max_size_limit [Integer]
+      def max_size_limit!(new_max_size_limit)
+        @dynamic_table.max_size_limit!(new_max_size_limit)
       end
     end
   end
