@@ -1,13 +1,13 @@
 module Biryani
   class Server
     # @param proc [Proc]
-    # @param workers_count [Integer, nil]
-    def initialize(proc, workers_count = nil)
-      raise ArgumentError, 'workers_count MUST be nil or a positive Integer' \
-        unless workers_count.nil? || (workers_count.is_a?(::Integer) && workers_count.positive?)
+    # @param worker_count [Integer, nil]
+    def initialize(proc, worker_count = nil)
+      raise ArgumentError, 'worker_count MUST be nil or a positive Integer' \
+        unless worker_count.nil? || (worker_count.is_a?(::Integer) && worker_count.positive?)
 
       @proc = proc
-      @worker_count = workers_count
+      @worker_count = worker_count
     end
 
     # @param socket [Socket]
