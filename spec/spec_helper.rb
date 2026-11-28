@@ -4,6 +4,6 @@ require 'biryani'
 include Biryani
 # rubocop: enable Style/MixinUsage
 
-def do_nothing_proc
-  Ractor.shareable_proc { |_, _| }
+def do_nothing_spawner
+  Ractor.make_shareable(Stream::Spawner.new(Ractor.shareable_proc { |_, _| }))
 end

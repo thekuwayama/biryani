@@ -9,7 +9,7 @@ RSpec.describe Connection do
       HTTP::Response.new(200, {}, 'OK')
     end
     let(:conn) do
-      Connection.new(do_nothing_proc)
+      Connection.new(do_nothing_spawner)
     end
 
     it 'should not send on a closed stream' do

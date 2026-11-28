@@ -3,7 +3,7 @@ require_relative '../spec_helper'
 RSpec.describe Connection do
   context 'serve' do
     let(:conn) do
-      Connection.new(do_nothing_proc)
+      Connection.new(do_nothing_spawner)
     end
 
     let(:reset) do

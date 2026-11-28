@@ -12,13 +12,13 @@ module Biryani
 
     # @param socket [Socket]
     def run(socket)
-      workers = Ractor.make_shareable(Array.new(@worker_count) { Stream.spawn_worker }) if pool?
+      spawner = Ractor.make_shareable(pool? ? Stream::Pool.new(@proc, @worker_count) : Stream::Spawner.new(@proc))
 
       loop do
         io = socket.accept
-        r = Ractor.new(@proc, workers) do |proc, workers_|
+        r = Ractor.new(spawner) do |spawner_|
           io_ = Ractor.recv
-          conn = Connection.new(proc, workers_)
+          conn = Connection.new(spawner_)
           conn.serve(io_)
         ensure
           Biryani.ignore_peer_closed { io_&.close }

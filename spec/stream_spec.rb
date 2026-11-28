@@ -23,51 +23,47 @@ RSpec.describe Stream do
 
   shared_examples 'Ractor-like rx' do
     it 'should accept #send with move: true' do
-      rx(1).send(request('/1'), move: true)
+      spawner.spawn(tx, 1).send(request('/1'), move: true)
       expect(response).to eq [1, 200, '/1']
     end
 
     it 'should accept #send without move:' do
-      rx(1).send(request('/1'))
+      spawner.spawn(tx, 1).send(request('/1'))
       expect(response).to eq [1, 200, '/1']
     end
 
     it 'should accept #<<' do
-      rx(1) << request('/1')
+      spawner.spawn(tx, 1) << request('/1')
       expect(response).to eq [1, 200, '/1']
     end
   end
 
-  context 'without workers' do
-    def rx(stream_id)
-      Stream.new(tx, stream_id, proc).rx
+  context Stream::Spawner do
+    let(:spawner) do
+      Ractor.make_shareable(Stream::Spawner.new(proc))
     end
 
-    it 'should use the Stream Ractor as rx' do
-      expect(rx(1)).to be_a Ractor
+    it 'should spawn the Stream Ractor' do
+      expect(spawner.spawn(tx, 1)).to be_a Ractor
     end
 
     it_behaves_like 'Ractor-like rx'
   end
 
-  context 'with workers' do
-    let(:workers) do
-      Ractor.make_shareable([Stream.spawn_worker])
+  context Stream::Pool do
+    let(:spawner) do
+      Ractor.make_shareable(Stream::Pool.new(proc, 1))
     end
 
-    def rx(stream_id)
-      Stream.new(tx, stream_id, proc, workers).rx
-    end
-
-    it 'should use the PoolDispatcher as rx' do
-      expect(rx(1)).to be_a Stream::PoolDispatcher
+    it 'should spawn the PoolDispatcher' do
+      expect(spawner.spawn(tx, 1)).to be_a Stream::PoolDispatcher
     end
 
     it_behaves_like 'Ractor-like rx'
 
     it 'should handle the requests in the Worker Ractor' do
-      rx(1).send(request('/1'), move: true)
-      rx(3).send(request('/3'), move: true)
+      spawner.spawn(tx, 1).send(request('/1'), move: true)
+      spawner.spawn(tx, 3).send(request('/3'), move: true)
 
       expect([response, response]).to contain_exactly [1, 200, '/1'], [3, 200, '/3']
     end
@@ -75,9 +71,9 @@ RSpec.describe Stream do
     it 'should keep the Worker Ractor working after the Connection has finished' do
       closed = Ractor::Port.new
       closed.close
-      Stream.new(closed, 1, proc, workers).rx.send(request('/1'), move: true)
+      spawner.spawn(closed, 1).send(request('/1'), move: true)
 
-      rx(3).send(request('/3'), move: true)
+      spawner.spawn(tx, 3).send(request('/3'), move: true)
       expect(tx.receive).to match [:response, an_instance_of(HTTP::Response), 3]
     end
   end

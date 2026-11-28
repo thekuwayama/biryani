@@ -21,12 +21,11 @@ module Biryani
     Ractor.make_shareable(CONNECTION_PREFACE)
     Ractor.make_shareable(CONNECTION_PREFACE_LENGTH)
 
-    # @param proc [Proc]
-    # @param workers [Array<Ractor>, nil]
-    def initialize(proc, workers = nil)
+    # @param spawner [Stream::Spawner, Stream::Pool]
+    def initialize(spawner)
       @port = Ractor::Port.new
       @recv_done = false
-      @streams_ctx = StreamsContext.new(proc, @port, workers)
+      @streams_ctx = StreamsContext.new(spawner, @port)
       @encoder = HPACK::Encoder.new(DEFAULT_HEADER_TABLE_SIZE)
       @decoder = HPACK::Decoder.new(DEFAULT_HEADER_TABLE_SIZE)
       @send_window = Window.new(INITIAL_CONNECTION_WINDOW_SIZE)

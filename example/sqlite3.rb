@@ -25,7 +25,7 @@ require 'biryani'
 #        |                                                                                          ^
 #        v                                                                                          |
 #   +-- server Ractor ----------------------+       +-- connection Ractor (1 Ractor / connection) --+--+
-#   |  server.run(socket)                   |       |  Stream.new(tx, stream_id, proc)              |  |
+#   |  server.run(socket)                   |       |  spawner.spawn(tx, stream_id)                 |  |
 #   |    r.send(io, move: true) ------------+------>|    Ractor.new(tx, stream_id, proc) -----------+  |
 #   +---------------------------------------+       +--------------------------------------------------+
 DB_PORT = Ractor::Port.new

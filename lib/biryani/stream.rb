@@ -1,31 +1,5 @@
 module Biryani
-  class Stream
-    attr_accessor :rx
-
-    # @param tx [Ractor::Port]
-    # @param stream_id [Integer]
-    # @param proc [Proc]
-    # @param workers [Array<Ractor>, nil]
-    def initialize(tx, stream_id, proc, workers = nil)
-      @rx = if workers
-              PoolDispatcher.new(workers, tx, stream_id, proc)
-            else
-              Ractor.new(tx, stream_id, proc) do |tx_, stream_id_, proc_|
-                Stream.handle(Ractor.recv, stream_id_, tx_, proc_)
-              end
-            end
-    end
-
-    # @return [Ractor]
-    def self.spawn_worker
-      Ractor.new do
-        loop do
-          req, stream_id, tx, proc = Ractor.recv
-          Stream.handle(req, stream_id, tx, proc)
-        end
-      end
-    end
-
+  module Stream
     # @param req [HTTP::Request]
     # @param stream_id [Integer]
     # @param tx [Ractor::Port]
@@ -48,16 +22,59 @@ module Biryani
       end
     end
 
+    class Spawner
+      # @param proc [Proc]
+      def initialize(proc)
+        @proc = proc
+      end
+
+      # @param tx [Ractor::Port]
+      # @param stream_id [Integer]
+      #
+      # @return [Ractor]
+      def spawn(tx, stream_id)
+        Ractor.new(tx, stream_id, @proc) do |tx_, stream_id_, proc_|
+          Stream.handle(Ractor.recv, stream_id_, tx_, proc_)
+        end
+      end
+    end
+
+    class Pool
+      # @param proc [Proc]
+      # @param worker_count [Integer]
+      def initialize(proc, worker_count)
+        @workers = Array.new(worker_count) { Pool.spawn_worker(proc) }
+      end
+
+      # @param tx [Ractor::Port]
+      # @param stream_id [Integer]
+      #
+      # @return [PoolDispatcher]
+      def spawn(tx, stream_id)
+        PoolDispatcher.new(@workers, tx, stream_id)
+      end
+
+      # @param proc [Proc]
+      #
+      # @return [Ractor]
+      def self.spawn_worker(proc)
+        Ractor.new(proc) do |proc_|
+          loop do
+            req, stream_id, tx = Ractor.recv
+            Stream.handle(req, stream_id, tx, proc_)
+          end
+        end
+      end
+    end
+
     class PoolDispatcher
       # @param workers [Array<Ractor>]
       # @param tx [Ractor::Port]
       # @param stream_id [Integer]
-      # @param proc [Proc]
-      def initialize(workers, tx, stream_id, proc)
+      def initialize(workers, tx, stream_id)
         @workers = workers
         @tx = tx
         @stream_id = stream_id
-        @proc = proc
       end
 
       # PoolDispatcher has the same #send interface as Ractor.
@@ -65,7 +82,7 @@ module Biryani
       # @param req [HTTP::Request]
       # @param move [Boolean]
       def send(req, move: false)
-        @workers.sample.send([req, @stream_id, @tx, @proc], move: move)
+        @workers.sample.send([req, @stream_id, @tx], move: move)
       end
 
       alias << send
